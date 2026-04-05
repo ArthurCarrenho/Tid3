@@ -1,0 +1,11 @@
+name = "tidal-sync-worker"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+[[durable_objects.bindings]]
+name = "SYNC_SESSIONS"
+class_name = "SyncSession"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["SyncSession"]

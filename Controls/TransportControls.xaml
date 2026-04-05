@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<UserControl
+    x:Class="TidalUi3.Controls.TransportControls"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12">
+        <Button x:Name="ShuffleButton" Style="{StaticResource SubtleButtonStyle}"
+                Width="38" Height="38" Padding="4"
+                Click="ShuffleButton_Click"
+                ToolTipService.ToolTip="Shuffle">
+            <FontIcon x:Name="ShuffleIcon" Glyph="&#xE8B1;" FontSize="16"
+                      Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+        </Button>
+        <Button x:Name="PreviousButton" Style="{StaticResource SubtleButtonStyle}"
+                Width="38" Height="38" Padding="4"
+                Click="PreviousButton_Click"
+                ToolTipService.ToolTip="Previous">
+            <FontIcon Glyph="&#xE892;" FontSize="18" />
+        </Button>
+        <Button x:Name="PlayPauseButton" Width="48" Height="48"
+                CornerRadius="24" Padding="0" BorderThickness="0"
+                Click="PlayPauseButton_Click"
+                Background="#00000000"
+                ToolTipService.ToolTip="Play / Pause">
+            <FontIcon x:Name="PlayPauseIcon" Glyph="&#xE768;"
+                      FontSize="22" Foreground="White" />
+        </Button>
+        <Button x:Name="NextButton" Style="{StaticResource SubtleButtonStyle}"
+                Width="38" Height="38" Padding="4"
+                Click="NextButton_Click"
+                ToolTipService.ToolTip="Next">
+            <FontIcon Glyph="&#xE893;" FontSize="18" />
+        </Button>
+        <Button x:Name="RepeatButton" Style="{StaticResource SubtleButtonStyle}"
+                Width="38" Height="38" Padding="4"
+                Click="RepeatButton_Click"
+                ToolTipService.ToolTip="Repeat">
+            <FontIcon x:Name="RepeatIcon" Glyph="&#xE8EE;" FontSize="16"
+                      Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+        </Button>
+    </StackPanel>
+</UserControl>

@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Window
+    x:Class="TidalUi3.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:TidalUi3"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:converters="using:TidalUi3.Converters"
+    xmlns:models="using:TidalUi3.Models"
+    xmlns:controls="using:TidalUi3.Controls"
+    mc:Ignorable="d"
+    Title="Tid3"
+>
+
+    <Window.SystemBackdrop>
+        <MicaBackdrop />
+    </Window.SystemBackdrop>
+
+    <Grid>
+        <!-- Login Screen -->
+        <Frame x:Name="LoginFrame" />
+
+        <!-- Main App (hidden until login) -->
+        <Grid x:Name="MainAppPanel" Visibility="Collapsed">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Content area: Nav + Lyrics side-by-side -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition x:Name="LyricsColumn" Width="0" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Main Navigation -->
+                <NavigationView
+                    x:Name="NavView"
+                    IsBackButtonVisible="Collapsed"
+                    IsPaneToggleButtonVisible="True"
+                    IsSettingsVisible="True"
+                    PaneDisplayMode="Left"
+                    OpenPaneLength="240"
+                    SelectionChanged="NavView_SelectionChanged"
+                    ItemInvoked="NavView_ItemInvoked"
+                    Loaded="NavView_Loaded"
+                >
+
+                    <!-- Header with Back/Forward + Search -->
+                    <NavigationView.Header>
+                        <controls:PageHeaderControl
+                            x:Name="PageHeader"
+                            x:Uid="PageHeader_Search"
+                            BackClick="PageHeader_BackClick"
+                            ForwardClick="PageHeader_ForwardClick"
+                            SearchSubmitted="PageHeader_SearchSubmitted"
+                            SuggestionChosen="PageHeader_SuggestionChosen"
+                        />
+                    </NavigationView.Header>
+
+                    <NavigationView.MenuItems>
+                        <NavigationViewItem
+                            x:Uid="NavHome"
+                            Tag="home"
+                            Icon="Home"
+                        />
+                        <NavigationViewItem
+                            x:Uid="NavLibrary"
+                            Tag="library"
+                            Icon="Library"
+                        />
+                    </NavigationView.MenuItems>
+
+                    <Frame
+                        x:Name="ContentFrame"
+                        Navigated="ContentFrame_Navigated"
+                    />
+                </NavigationView>
+
+                <!-- Queue Panel (right side) -->
+                <controls:QueuePanelControl
+                    x:Name="QueuePanel"
+                    Grid.Column="1"
+                    Visibility="Collapsed"
+                    CloseButtonClicked="QueueCloseButton_Click"
+                />
+
+                <!-- Lyrics Panel (right side) -->
+                <controls:LyricsPanelControl
+                    x:Name="LyricsPanel"
+                    Grid.Column="1"
+                    Visibility="Collapsed"
+                    CloseButtonClicked="LyricsCloseButton_Click"
+                />
+
+            </Grid>  <!-- End content area -->
+
+            <!-- Bottom Playback Bar -->
+            <controls:PlaybackBarControl
+                x:Name="PlaybackBar"
+                Grid.Row="1"
+                LyricsButtonClicked="PlaybackBar_LyricsButtonClicked"
+                QueueButtonClicked="PlaybackBar_QueueButtonClicked"
+            />
+        </Grid>
+    </Grid>
+</Window>

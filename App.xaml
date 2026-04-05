@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Application
+    x:Class="TidalUi3.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:TidalUi3"
+    xmlns:controls="using:TidalUi3.Controls"
+    xmlns:converters="using:TidalUi3.Converters"
+>
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <XamlControlsResources
+                    xmlns="using:Microsoft.UI.Xaml.Controls"
+                />
+                <!-- Other merged dictionaries here -->
+            </ResourceDictionary.MergedDictionaries>
+            <!-- Converters -->
+            <!-- Universal BoolConverter - use ConverterParameter to specify type:
+                 "Visibility" (default), "Visibility,Invert", "Foreground", "Glyph", "Opacity", "FontWeight" -->
+            <converters:BoolConverter x:Key="BoolConverter" />
+
+            <!-- Legacy converters (kept for backward compatibility) -->
+            <converters:BoolToVisibilityConverter
+                x:Key="BoolToVisibilityConverter"
+            />
+            <converters:InverseBoolToVisibilityConverter
+                x:Key="InverseBoolToVisibilityConverter"
+            />
+            <converters:BoolToFontWeightConverter
+                x:Key="BoolToFontWeightConverter"
+            />
+            <converters:QualityColorConverter x:Key="QualityColorConverter" />
+            <converters:BoolToOpacityConverter x:Key="BoolToOpacityConverter" />
+            <converters:BoolToGlyphConverter x:Key="BoolToGlyphConverter" />
+            <converters:BoolToForegroundConverter
+                x:Key="BoolToForegroundConverter"
+            />
+            <!-- Other app resources here -->
+            <Style x:Key="SubtleButtonStyle" TargetType="Button">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="CornerRadius" Value="16" />
+            </Style>
+
+            <DataTemplate x:Key="QueueItemTemplate">
+                <Grid Padding="4,6" ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="36" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <controls:ImagePlaceholderControl
+                        Width="36"
+                        Height="36"
+                        ImageSource="{Binding CoverUrl}"
+                        FallbackGlyph="&#xE8D6;"
+                        IconSize="14"
+                        ImageCornerRadius="4"
+                    />
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock
+                            Text="{Binding Title}"
+                            Style="{StaticResource BodyTextBlockStyle}"
+                            TextTrimming="CharacterEllipsis"
+                        />
+                        <TextBlock
+                            Text="{Binding Artist}"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            TextTrimming="CharacterEllipsis"
+                        />
+                    </StackPanel>
+                    <TextBlock
+                        Grid.Column="2"
+                        Text="{Binding Duration}"
+                        VerticalAlignment="Center"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                    />
+                </Grid>
+            </DataTemplate>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

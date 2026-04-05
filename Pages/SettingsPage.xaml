@@ -1,0 +1,489 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="TidalUi3.Pages.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:controls="using:TidalUi3.Controls"
+    mc:Ignorable="d"
+>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,16,0">
+        <StackPanel Spacing="8" Padding="36,24,36,120" MaxWidth="700">
+
+            <TextBlock
+                x:Uid="SettingsHeader"
+                Style="{StaticResource TitleLargeTextBlockStyle}"
+                Margin="0,0,0,16"
+            />
+            
+            <InfoBar
+                x:Name="RestartInfoBar"
+                x:Uid="SettingsLanguageRestart"
+                IsOpen="False"
+                Severity="Warning"
+                IsClosable="True"
+                Margin="0,0,0,16"
+            />
+
+            <!-- ════════════════════════════════════════ -->
+            <!-- ACCOUNT                                  -->
+            <!-- ════════════════════════════════════════ -->
+            <TextBlock x:Uid="SettingsAccount" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,0,0,4" />
+
+            <Grid
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="20,16"
+            >
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <PersonPicture
+                    x:Name="UserProfilePicture"
+                    Width="56"
+                    Height="56"
+                />
+
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2" Margin="16,0,0,0">
+                    <TextBlock
+                        x:Name="UserNameText"
+                        Style="{StaticResource BodyStrongTextBlockStyle}"
+                        x:Uid="SettingsAccount_Loading"
+                    />
+                    <TextBlock
+                        x:Name="UserEmailText"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock
+                            x:Name="UserIdText"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                        />
+                        <TextBlock
+                            Text="·"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                        />
+                        <TextBlock
+                            x:Name="UserCountryText"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                        />
+                    </StackPanel>
+                </StackPanel>
+
+                <Button
+                    x:Name="LogoutButton"
+                    Grid.Column="2"
+                    Click="LogoutButton_Click"
+                    VerticalAlignment="Center"
+                >
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE8AB;" FontSize="14" />
+                        <TextBlock x:Uid="LogoutButtonText" />
+                    </StackPanel>
+                </Button>
+            </Grid>
+
+            <!-- ════════════════════════════════════════ -->
+            <!-- PLAYBACK                                 -->
+            <!-- ════════════════════════════════════════ -->
+            <TextBlock x:Uid="SettingsPlayback" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,20,0,4" />
+
+            <controls:SettingsCardControl
+                IconGlyph="&#xE8D6;"
+                x:Uid="SettingsPlayback_AudioQuality"
+            >
+                <controls:SettingsCardControl.ActionContent>
+                    <ComboBox x:Name="QualityCombo" SelectionChanged="QualityCombo_SelectionChanged" MinWidth="150">
+                        <ComboBoxItem x:Uid="SettingsPlayback_QualityLow" Tag="LOW" />
+                        <ComboBoxItem x:Uid="SettingsPlayback_QualityHigh" Tag="LOSSLESS" />
+                        <ComboBoxItem x:Uid="SettingsPlayback_QualityMax" Tag="HI_RES_LOSSLESS" />
+                    </ComboBox>
+                </controls:SettingsCardControl.ActionContent>
+            </controls:SettingsCardControl>
+
+            <controls:SettingsCardControl
+                IconGlyph="&#xE8EE;"
+                x:Uid="SettingsPlayback_TrackRadio"
+            >
+                <controls:SettingsCardControl.ActionContent>
+                    <ToggleSwitch
+                        x:Name="PlayRadioSwitch"
+                        Toggled="PlayRadioSwitch_Toggled"
+                        MinWidth="0"
+                    />
+                </controls:SettingsCardControl.ActionContent>
+            </controls:SettingsCardControl>
+
+            <!-- Crossfade (Hidden per user request) -->
+            <controls:SettingsCardControl
+                Visibility="Collapsed"
+                IconGlyph="&#xE71E;"
+                x:Uid="SettingsPlayback_Crossfade"
+                IsDevPreview="True"
+            >
+                <controls:SettingsCardControl.ActionContent>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Slider IsEnabled="False" Value="0" Minimum="0" Maximum="12"
+                                Width="120" VerticalAlignment="Center" />
+                        <TextBlock x:Uid="SettingsPlayback_Crossfade_Off" VerticalAlignment="Center"
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </controls:SettingsCardControl.ActionContent>
+            </controls:SettingsCardControl>
+
+            <controls:SettingsCardControl
+                IconGlyph="&#xE9CE;"
+                x:Uid="SettingsPlayback_Gapless"
+            >
+                <controls:SettingsCardControl.ActionContent>
+                    <ToggleSwitch x:Name="GaplessSwitch" Toggled="GaplessSwitch_Toggled" MinWidth="0" />
+                </controls:SettingsCardControl.ActionContent>
+            </controls:SettingsCardControl>
+
+            <!-- Normalize volume (Dev Preview / Hidden for now) -->
+            <controls:SettingsCardControl
+                Visibility="Collapsed"
+                IconGlyph="&#xE767;"
+                x:Uid="SettingsPlayback_Normalize"
+                IsDevPreview="True"
+            >
+                <controls:SettingsCardControl.ActionContent>
+                    <ToggleSwitch IsEnabled="False" MinWidth="0" />
+                </controls:SettingsCardControl.ActionContent>
+            </controls:SettingsCardControl>
+
+            <!-- ════════════════════════════════════════ -->
+            <!-- APPEARANCE                               -->
+            <!-- ════════════════════════════════════════ -->
+            <TextBlock x:Uid="SettingsAppearance" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,20,0,4" />
+            
+            <controls:SettingsCardControl
+                IconGlyph="&#xE8C1;"
+                x:Uid="SettingsLanguageCard"
+            >
+                <controls:SettingsCardControl.ActionContent>
+                    <ComboBox x:Name="LanguageCombo" SelectionChanged="LanguageCombo_SelectionChanged" MinWidth="150">
+                        <ComboBoxItem x:Uid="SettingsAppearance_Language_System" Tag="" />
+                        <ComboBoxItem Content="English" Tag="en-US" />
+                        <ComboBoxItem Content="Português (Brasil)" Tag="pt-BR" />
+                    </ComboBox>
+                </controls:SettingsCardControl.ActionContent>
+            </controls:SettingsCardControl>
+
+            <controls:SettingsCardControl
+                IconGlyph="&#xE790;"
+                x:Uid="SettingsAppearance_Theme"
+            >
+                <controls:SettingsCardControl.ActionContent>
+                    <ComboBox x:Name="ThemeCombo" SelectionChanged="ThemeCombo_SelectionChanged" MinWidth="150">
+                        <ComboBoxItem x:Uid="SettingsAppearance_Theme_System" Tag="Default" />
+                        <ComboBoxItem x:Uid="SettingsAppearance_Theme_Light" Tag="Light" />
+                        <ComboBoxItem x:Uid="SettingsAppearance_Theme_Dark" Tag="Dark" />
+                    </ComboBox>
+                </controls:SettingsCardControl.ActionContent>
+            </controls:SettingsCardControl>
+
+            <!-- ════════════════════════════════════════ -->
+            <!-- INTEGRATIONS                             -->
+            <!-- ════════════════════════════════════════ -->
+            <TextBlock x:Uid="SettingsIntegrations" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,20,0,4" />
+
+            <!-- Last.fm -->
+            <Grid
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="16,14"
+            >
+                <StackPanel Spacing="12">
+                    <!-- Header row -->
+                    <Grid ColumnSpacing="14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <FontIcon Glyph="&#xE906;" FontSize="20"
+                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                  VerticalAlignment="Center" />
+
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                            <TextBlock x:Uid="SettingsIntegrations_LastFm" Style="{StaticResource BodyTextBlockStyle}" />
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock
+                                    x:Name="LastFmStatusText"
+                                    x:Uid="SettingsIntegrations_LastFm_Status"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                />
+                                <ProgressRing
+                                    x:Name="LastFmAuthProgress"
+                                    IsActive="False"
+                                    Visibility="Collapsed"
+                                    Width="12"
+                                    Height="12"
+                                />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <Button
+                            x:Name="LastFmConnectButton"
+                            Grid.Column="2"
+                            Click="LastFmConnectButton_Click"
+                            VerticalAlignment="Center"
+                            Style="{StaticResource AccentButtonStyle}"
+                            IsEnabled="False"
+                        >
+                            <TextBlock x:Name="LastFmConnectButtonText" x:Uid="SettingsIntegrations_LastFm_Connect" />
+                        </Button>
+                    </Grid>
+
+                    <!-- API credentials -->
+                    <TextBox
+                        x:Name="LastFmApiKeyBox"
+                        Header="API Key"
+                        PlaceholderText="Paste your Last.fm API key"
+                        LostFocus="LastFmApiKeyBox_LostFocus"
+                    />
+                    <PasswordBox
+                        x:Name="LastFmApiSecretBox"
+                        Header="API Secret"
+                        PlaceholderText="Paste your Last.fm shared secret"
+                        LostFocus="LastFmApiSecretBox_LostFocus"
+                    />
+                    <TextBlock
+                        Text="Get free API credentials at last.fm/api/account/create"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                    />
+                </StackPanel>
+            </Grid>
+
+            <!-- Cloud Sync -->
+            <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                <Expander.Header>
+                    <Grid Padding="0,8" ColumnSpacing="14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Glyph="&#xE753;" FontSize="20"
+                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                  VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                            <TextBlock x:Uid="SettingsIntegrations_CloudSync" Style="{StaticResource BodyTextBlockStyle}" />
+                            <TextBlock x:Uid="SettingsIntegrations_CloudSync_Desc"
+                                       Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                        <ToggleSwitch
+                            x:Name="SyncEnabledSwitch"
+                            Grid.Column="2"
+                            Toggled="SyncEnabledSwitch_Toggled"
+                            MinWidth="0"
+                            VerticalAlignment="Center"
+                        />
+                    </Grid>
+                </Expander.Header>
+                <Expander.Content>
+                    <StackPanel Spacing="12" Padding="0,4,0,8">
+                        <InfoBar
+                            x:Name="SyncErrorInfoBar"
+                            IsOpen="False"
+                            Severity="Error"
+                            Margin="0,0,0,4"
+                        />
+
+                        <!-- Status Card -->
+                        <Grid
+                            Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                            CornerRadius="6"
+                            Padding="12,10"
+                        >
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Spacing="3" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <Ellipse
+                                        x:Name="SyncCardDot"
+                                        Width="8" Height="8"
+                                        VerticalAlignment="Center"
+                                        Fill="{ThemeResource TextFillColorDisabledBrush}"
+                                    />
+                                    <TextBlock
+                                        x:Name="SyncCardStatusText"
+                                        Style="{StaticResource CaptionTextBlockStyle}"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    />
+                                    <ProgressRing x:Name="SyncProgressRing" IsActive="False" Width="14" Height="14" />
+                                </StackPanel>
+                                <TextBlock
+                                    x:Name="SyncCardDeviceText"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                />
+                                <TextBlock
+                                    x:Name="SyncCardDeviceCountText"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                    Visibility="Collapsed"
+                                />
+                            </StackPanel>
+                            <Button
+                                x:Name="SyncReconnectButton"
+                                Grid.Column="1"
+                                VerticalAlignment="Center"
+                                Click="SyncReconnectButton_Click"
+                                Visibility="Collapsed"
+                            >
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <FontIcon Glyph="&#xE72C;" FontSize="13" />
+                                    <TextBlock x:Uid="SettingsIntegrations_CloudSync_Reconnect" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+
+                        <TextBox
+                            x:Name="SyncServerBox"
+                            x:Uid="SettingsIntegrations_CloudSync_Server"
+                            LostFocus="SyncServerBox_LostFocus"
+                        />
+                        <TextBlock
+                            x:Uid="SettingsIntegrations_CloudSync_Footer"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                            TextWrapping="Wrap"
+                        />
+                    </StackPanel>
+                </Expander.Content>
+            </Expander>
+
+            <!-- Discord Rich Presence -->
+            <controls:SettingsCardControl
+                IconGlyph="&#xE8CF;"
+                x:Uid="SettingsIntegrations_Discord"
+            >
+                <controls:SettingsCardControl.ActionContent>
+                    <ToggleSwitch x:Name="DiscordRpcSwitch" Toggled="DiscordRpcSwitch_Toggled" MinWidth="0" />
+                </controls:SettingsCardControl.ActionContent>
+            </controls:SettingsCardControl>
+
+            <!-- ════════════════════════════════════════ -->
+            <!-- GENERAL                                  -->
+            <!-- ════════════════════════════════════════ -->
+            <TextBlock x:Uid="SettingsGeneral" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,20,0,4" />
+
+            <controls:SettingsCardControl
+                IconGlyph="&#xE7E8;"
+                x:Uid="SettingsGeneral_Startup"
+            >
+                <controls:SettingsCardControl.ActionContent>
+                    <ToggleSwitch x:Name="StartupSwitch" Toggled="StartupSwitch_Toggled" MinWidth="0" />
+                </controls:SettingsCardControl.ActionContent>
+            </controls:SettingsCardControl>
+
+            <controls:SettingsCardControl
+                IconGlyph="&#xE921;"
+                x:Uid="SettingsGeneral_Tray"
+            >
+                <controls:SettingsCardControl.ActionContent>
+                    <ToggleSwitch x:Name="TraySwitch" Toggled="TraySwitch_Toggled" MinWidth="0" />
+                </controls:SettingsCardControl.ActionContent>
+            </controls:SettingsCardControl>
+
+            <controls:SettingsCardControl
+                IconGlyph="&#xE765;"
+                x:Uid="SettingsGeneral_Notifications"
+            >
+                <controls:SettingsCardControl.ActionContent>
+                    <ToggleSwitch x:Name="NotificationsSwitch" Toggled="NotificationsSwitch_Toggled" MinWidth="0" />
+                </controls:SettingsCardControl.ActionContent>
+            </controls:SettingsCardControl>
+
+            <!-- ════════════════════════════════════════ -->
+            <!-- STORAGE                                  -->
+            <!-- ════════════════════════════════════════ -->
+            <TextBlock x:Uid="SettingsStorage" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,20,0,4" />
+
+            <controls:SettingsCardControl
+                IconGlyph="&#xE8B7;"
+                x:Uid="SettingsStorage_Cache"
+            >
+                <controls:SettingsCardControl.ActionContent>
+                    <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                        <TextBlock
+                            x:Name="CacheSizeText"
+                            x:Uid="SettingsStorage_Cache_Calculating"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            VerticalAlignment="Center"
+                        />
+                        <Button x:Name="ClearCacheButton" Click="ClearCache_Click">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE74D;" FontSize="13" />
+                                <TextBlock x:Uid="SettingsStorage_Cache_Clear" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </controls:SettingsCardControl.ActionContent>
+            </controls:SettingsCardControl>
+
+            <!-- ════════════════════════════════════════ -->
+            <!-- ABOUT                                    -->
+            <!-- ════════════════════════════════════════ -->
+            <TextBlock x:Uid="SettingsAbout" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,20,0,4" />
+
+            <Grid
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="20,18"
+            >
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Image
+                    Source="ms-appx:///Assets/Square150x150Logo.scale-200.png"
+                    Width="56"
+                    Height="56"
+                    VerticalAlignment="Center"
+                />
+
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4" Margin="18,0,0,0">
+                    <TextBlock Text="Tid3" FontSize="20" FontWeight="SemiBold" />
+                    <TextBlock
+                        x:Name="VersionText"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    />
+                    <TextBlock
+                        x:Uid="SettingsAbout_Description"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                    />
+                </StackPanel>
+            </Grid>
+
+        </StackPanel>
+    </ScrollViewer>
+</Page>

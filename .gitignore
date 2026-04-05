@@ -1,0 +1,35 @@
+# Build output
+bin/
+obj/
+
+# IDE
+.vs/
+.vscode/
+.zed/
+*.user
+*.suo
+
+# Windows artifacts
+nul
+
+# Node / Wrangler
+*/node_modules
+.wrangler/
+
+# Cloudflare secrets
+wrangler.toml.local
+
+# Claude Code
+.claude/settings.local.json
+
+# Dev dumps & logs
+*_dump.json
+api_err.txt
+labs/
+
+# Go sync client local config (use config.example.json as template)
+docs/examples/go-client/config.json
+
+# Secrets (never commit)
+.env
+.env.*

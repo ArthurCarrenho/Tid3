@@ -1,0 +1,51 @@
+<UserControl
+    x:Class="TidalUi3.Controls.LyricsPanelControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:TidalUi3.Controls"
+    xmlns:controls="using:TidalUi3.Controls"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="{ThemeResource LayerFillColorDefaultBrush}"
+    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+    BorderThickness="1,0,0,0">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid Padding="16,40,16,12" ColumnSpacing="8"
+              BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+              BorderThickness="0,0,0,1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock x:Uid="LyricsHeader" Style="{StaticResource SubtitleTextBlockStyle}"
+                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            <controls:CloseButtonControl x:Name="LyricsCloseButtonControl" Grid.Column="1"
+                x:Uid="LyricsCloseButton"
+                Click="LyricsCloseButton_Click" />
+        </Grid>
+
+        <!-- Lyrics Content -->
+        <ScrollViewer x:Name="LyricsScrollViewer" Grid.Row="1" Padding="20,16">
+            <StackPanel x:Name="LyricsContainer" Spacing="8" />
+        </ScrollViewer>
+
+        <!-- Loading Indicator -->
+        <ProgressRing x:Name="LyricsLoadingRing" Grid.Row="1"
+                      Width="48" Height="48"
+                      VerticalAlignment="Center" HorizontalAlignment="Center"
+                      IsActive="False" Visibility="Collapsed" />
+
+        <!-- No Lyrics Message -->
+        <controls:EmptyStateControl x:Name="NoLyricsMessage" Grid.Row="1"
+            IconGlyph="&#xED1E;" x:Uid="LyricsEmpty"
+            Visibility="Collapsed" />
+    </Grid>
+</UserControl>

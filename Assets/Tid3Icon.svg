@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="waveGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00E5FF;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#007CF0;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#6A3DE8;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0A0E1A;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#141828;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded square -->
+  <rect width="512" height="512" rx="96" ry="96" fill="url(#bgGrad)" />
+
+  <!-- Wave group, centered in canvas -->
+  <g transform="translate(3, 45)">
+    <!-- Waveform bars forming a tidal wave curve -->
+
+    <!-- Bar 1 -->
+    <rect x="68" y="310" width="18" height="40" rx="9" fill="url(#waveGrad)" opacity="0.6" />
+
+    <!-- Bar 2 -->
+    <rect x="100" y="285" width="18" height="65" rx="9" fill="url(#waveGrad)" opacity="0.7" />
+
+    <!-- Bar 3 -->
+    <rect x="132" y="255" width="18" height="95" rx="9" fill="url(#waveGrad)" opacity="0.75" />
+
+    <!-- Bar 4 -->
+    <rect x="164" y="218" width="18" height="132" rx="9" fill="url(#waveGrad)" opacity="0.8" />
+
+    <!-- Bar 5 -->
+    <rect x="196" y="175" width="18" height="175" rx="9" fill="url(#waveGrad)" opacity="0.85" />
+
+    <!-- Bar 6 - wave peak rising -->
+    <rect x="228" y="130" width="18" height="220" rx="9" fill="url(#waveGrad)" opacity="0.9" />
+
+    <!-- Bar 7 - wave crest -->
+    <rect x="260" y="95" width="18" height="255" rx="9" fill="url(#waveGrad)" opacity="0.95" />
+
+    <!-- Bar 8 - peak -->
+    <rect x="292" y="78" width="18" height="272" rx="9" fill="url(#waveGrad)" opacity="1" />
+
+    <!-- Bar 9 - curling over -->
+    <rect x="324" y="88" width="18" height="245" rx="9" fill="url(#waveGrad)" opacity="0.95" />
+
+    <!-- Bar 10 - curl continues -->
+    <rect x="356" y="115" width="18" height="195" rx="9" fill="url(#waveGrad)" opacity="0.85" />
+
+    <!-- Bar 11 - wave breaking down -->
+    <rect x="388" y="155" width="18" height="140" rx="9" fill="url(#waveGrad)" opacity="0.7" />
+
+    <!-- Bar 12 - spray/tail -->
+    <rect x="420" y="195" width="18" height="80" rx="9" fill="url(#waveGrad)" opacity="0.5" />
+
+    <!-- Foam/spray dots at the curl -->
+    <circle cx="345" cy="78" r="6" fill="#00E5FF" opacity="0.7" />
+    <circle cx="370" cy="90" r="5" fill="#00E5FF" opacity="0.5" />
+    <circle cx="392" cy="108" r="4" fill="#00E5FF" opacity="0.4" />
+    <circle cx="360" cy="72" r="4" fill="#00E5FF" opacity="0.35" />
+    <circle cx="410" cy="128" r="3" fill="#00E5FF" opacity="0.3" />
+  </g>
+</svg>

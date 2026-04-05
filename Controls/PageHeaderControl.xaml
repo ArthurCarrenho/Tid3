@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<UserControl
+    x:Class="TidalUi3.Controls.PageHeaderControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:TidalUi3.Controls"
+    xmlns:converters="using:TidalUi3.Converters"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+>
+
+    <UserControl.Resources>
+        <converters:BoolToVisibilityConverter
+            x:Key="BoolToVisibilityConverter"
+        />
+        <converters:InverseBoolToVisibilityConverter
+            x:Key="InverseBoolToVisibilityConverter"
+        />
+        <converters:BoolToFontWeightConverter
+            x:Key="BoolToFontWeightConverter"
+        />
+    </UserControl.Resources>
+
+    <Grid Padding="0,6,24,6">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Orientation="Horizontal" Spacing="2">
+            <Button
+                x:Name="BackButton"
+                Click="BackButton_Click"
+                Style="{StaticResource SubtleButtonStyle}"
+                Width="32"
+                Height="32"
+                Padding="0"
+                ToolTipService.ToolTip="Back"
+                IsEnabled="{x:Bind CanGoBack, Mode=OneWay}"
+            >
+                <FontIcon Glyph="&#xE72B;" FontSize="14" />
+            </Button>
+            <Button
+                x:Name="ForwardButton"
+                Click="ForwardButton_Click"
+                Style="{StaticResource SubtleButtonStyle}"
+                Width="32"
+                Height="32"
+                Padding="0"
+                ToolTipService.ToolTip="Forward"
+                IsEnabled="{x:Bind CanGoForward, Mode=OneWay}"
+            >
+                <FontIcon Glyph="&#xE72A;" FontSize="14" />
+            </Button>
+        </StackPanel>
+
+        <AutoSuggestBox
+            x:Name="HeaderSearchBox"
+            Grid.Column="2"
+            PlaceholderText="{x:Bind SearchPlaceholder, Mode=OneWay}"
+            QueryIcon="Find"
+            Width="320"
+            TextChanged="HeaderSearchBox_TextChanged"
+            QuerySubmitted="HeaderSearchBox_QuerySubmitted"
+            SuggestionChosen="HeaderSearchBox_SuggestionChosen"
+        >
+            <AutoSuggestBox.ItemTemplate>
+                <DataTemplate>
+                    <Grid
+                        Padding="4,8"
+                        ColumnSpacing="12"
+                        Background="Transparent"
+                        Loaded="SuggestionItem_Loaded"
+                    >
+
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <FontIcon
+                            Glyph="{Binding Icon}"
+                            FontSize="16"
+                            VerticalAlignment="Center"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Visibility="{Binding IsRichResult, Converter={StaticResource InverseBoolToVisibilityConverter}}"
+                        />
+
+                        <controls:ImagePlaceholderControl
+                            Width="40"
+                            Height="40"
+                            ImageSource="{Binding CoverUrl}"
+                            ImageCornerRadius="4"
+                            Visibility="{Binding IsRichResult, Converter={StaticResource BoolToVisibilityConverter}}"
+                        />
+
+                        <StackPanel
+                            Grid.Column="1"
+                            VerticalAlignment="Center"
+                            Spacing="1"
+                        >
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock
+                                    Text="{Binding Display}"
+                                    FontWeight="{Binding IsRichResult, Converter={StaticResource BoolToFontWeightConverter}}"
+                                    TextTrimming="CharacterEllipsis"
+                                    MaxLines="1"
+                                />
+                                <controls:ExplicitBadgeControl
+                                    IsExplicit="{Binding IsExplicit}"
+                                />
+                            </StackPanel>
+                            <TextBlock
+                                Text="{Binding Subtitle}"
+                                Visibility="{Binding IsRichResult, Converter={StaticResource BoolToVisibilityConverter}}"
+                                Style="{StaticResource CaptionTextBlockStyle}"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                TextTrimming="CharacterEllipsis"
+                                MaxLines="1"
+                            />
+                        </StackPanel>
+                    </Grid>
+                </DataTemplate>
+            </AutoSuggestBox.ItemTemplate>
+        </AutoSuggestBox>
+    </Grid>
+</UserControl>

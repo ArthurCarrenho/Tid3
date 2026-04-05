@@ -1,0 +1,137 @@
+<UserControl
+    x:Class="TidalUi3.Controls.QueuePanelControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:TidalUi3.Controls"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:controls="using:TidalUi3.Controls"
+    mc:Ignorable="d"
+    Background="{ThemeResource LayerFillColorDefaultBrush}"
+    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+    BorderThickness="1,0,0,0">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid.Resources>
+            <DataTemplate x:Key="QueueTrackTemplate">
+                <Grid Padding="4,6" ColumnSpacing="10" Background="Transparent"
+                      Opacity="{Binding IsPlayed, Converter={StaticResource BoolToOpacityConverter}}">
+                    <Grid.ContextFlyout>
+                        <MenuFlyout>
+                            <MenuFlyoutItem x:Uid="QueueContext_GoToArtist" Click="Context_GoToArtist_Click" Tag="{Binding}" />
+                            <MenuFlyoutItem x:Uid="QueueContext_GoToAlbum" Click="Context_GoToAlbum_Click" Tag="{Binding}" />
+                            <MenuFlyoutSeparator />
+                            <MenuFlyoutItem x:Uid="QueueContext_Remove" Click="Context_Remove_Click" Tag="{Binding}" />
+                        </MenuFlyout>
+                    </Grid.ContextFlyout>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="36" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <controls:ImagePlaceholderControl Width="36" Height="36"
+                        ImageSource="{Binding CoverUrl}"
+                        FallbackGlyph="{Binding IsPlaying, Converter={StaticResource BoolToGlyphConverter}}"
+                        IconSize="14" ImageCornerRadius="4" />
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" MaxLines="1"
+                                   Foreground="{Binding IsPlaying, Converter={StaticResource BoolToForegroundConverter}}" />
+                        <TextBlock Text="{Binding Artist}" FontSize="11"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   TextTrimming="CharacterEllipsis" MaxLines="1" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="2" Text="{Binding Duration}" VerticalAlignment="Center"
+                               FontSize="11" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                    <Button Grid.Column="3" Tag="remove" Background="Transparent" BorderThickness="0"
+                            Width="28" Height="28" Padding="0" CornerRadius="14"
+                            Visibility="{Binding IsUpcoming, Converter={StaticResource BoolToVisibilityConverter}}"
+                            VerticalAlignment="Center" x:Uid="QueueRemoveButton"
+                            Click="RemoveButton_Click">
+                        <FontIcon Glyph="&#xE711;" FontSize="10" />
+                    </Button>
+                </Grid>
+            </DataTemplate>
+        </Grid.Resources>
+
+        <!-- Header -->
+        <Grid Padding="16,40,16,12" ColumnSpacing="8"
+              BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+              BorderThickness="0,0,0,1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock x:Uid="QueueHeader" Style="{StaticResource SubtitleTextBlockStyle}"
+                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                <Button x:Name="QueueClearButton" Width="28" Height="28" Padding="0"
+                        Background="Transparent" BorderThickness="0" CornerRadius="14"
+                        Click="QueueClearButton_Click"
+                        x:Uid="QueueClearButton">
+                    <FontIcon Glyph="&#xE74D;" FontSize="12" />
+                </Button>
+                <controls:CloseButtonControl x:Name="QueueCloseButtonControl"
+                    x:Uid="QueueCloseButton"
+                    Click="QueueCloseButton_Click" />
+            </StackPanel>
+        </Grid>
+
+
+        <!-- Separated Queue Lists -->
+        <ScrollViewer Grid.Row="1" x:Name="QueueScrollViewer" VerticalScrollBarVisibility="Auto">
+            <StackPanel Padding="4,4" Spacing="16" Margin="0,0,0,40">
+
+                <!-- History -->
+                <StackPanel x:Name="HistorySection">
+                    <TextBlock x:Uid="QueueHistory" FontWeight="SemiBold" FontSize="14"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               Margin="4,0,0,8" />
+                    <ListView x:Name="HistoryListView"
+                              SelectionMode="None" IsItemClickEnabled="True"
+                              ItemClick="QueueListView_ItemClick"
+                              ItemTemplate="{StaticResource QueueTrackTemplate}"
+                              ScrollViewer.VerticalScrollMode="Disabled" />
+                </StackPanel>
+
+                <!-- Now Playing -->
+                <StackPanel x:Name="CurrentSection">
+                    <TextBlock x:Uid="QueueNowPlaying" FontWeight="SemiBold" FontSize="14"
+                               Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                               Margin="4,0,0,8" />
+                    <ListView x:Name="CurrentListView"
+                              SelectionMode="None" IsItemClickEnabled="True"
+                              ItemClick="QueueListView_ItemClick"
+                              ItemTemplate="{StaticResource QueueTrackTemplate}"
+                              ScrollViewer.VerticalScrollMode="Disabled" />
+                </StackPanel>
+
+                <!-- Up Next -->
+                <StackPanel x:Name="UpcomingSection">
+                    <TextBlock x:Uid="QueueUpNext" FontWeight="SemiBold" FontSize="14"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               Margin="4,0,0,8" />
+                    <ListView x:Name="UpcomingListView"
+                              SelectionMode="None" IsItemClickEnabled="True"
+                              ItemClick="QueueListView_ItemClick"
+                              CanReorderItems="True" AllowDrop="True" CanDragItems="True"
+                              DragItemsCompleted="QueueListView_DragItemsCompleted"
+                              ItemTemplate="{StaticResource QueueTrackTemplate}"
+                              ScrollViewer.VerticalScrollMode="Disabled" />
+                </StackPanel>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Empty Queue Message -->
+        <controls:EmptyStateControl x:Name="EmptyQueueMessage" Grid.Row="1"
+            IconGlyph="&#xE90B;" x:Uid="QueueEmpty"
+            Visibility="Collapsed" />
+
+    </Grid>
+</UserControl>

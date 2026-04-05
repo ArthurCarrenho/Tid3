@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<UserControl
+    x:Class="TidalUi3.Controls.SettingsCardControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+>
+    <Grid
+        x:Name="RootCard"
+        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+        BorderThickness="1"
+        CornerRadius="8"
+        Padding="16,14"
+        MinHeight="52"
+    >
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Icon -->
+        <FontIcon
+            x:Name="CardIcon"
+            FontSize="20"
+            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+            VerticalAlignment="Center"
+            Margin="0,0,14,0"
+        />
+
+        <!-- Title + Description -->
+        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock
+                    x:Name="TitleText"
+                    Style="{StaticResource BodyTextBlockStyle}"
+                    VerticalAlignment="Center"
+                />
+                <Border
+                    x:Name="DevBadge"
+                    Visibility="Collapsed"
+                    Background="{ThemeResource SystemFillColorCautionBackgroundBrush}"
+                    CornerRadius="4"
+                    Padding="6,2"
+                    VerticalAlignment="Center"
+                >
+                    <TextBlock
+                        Text="IN DEVELOPMENT"
+                        FontSize="9"
+                        FontWeight="SemiBold"
+                        Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                    />
+                </Border>
+            </StackPanel>
+            <TextBlock
+                x:Name="DescriptionText"
+                Style="{StaticResource CaptionTextBlockStyle}"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                TextWrapping="Wrap"
+            />
+        </StackPanel>
+
+        <!-- Action area -->
+        <ContentPresenter
+            x:Name="ActionPresenter"
+            Grid.Column="2"
+            VerticalAlignment="Center"
+            Margin="12,0,0,0"
+        />
+    </Grid>
+</UserControl>

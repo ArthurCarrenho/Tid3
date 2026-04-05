@@ -1,0 +1,5 @@
+{
+  "worker_url": "your-worker.workers.dev",
+  "user_id": "YOUR_TIDAL_USER_ID",
+  "device_name": "My Go Client"
+}

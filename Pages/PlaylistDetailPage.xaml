@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="TidalUi3.Pages.PlaylistDetailPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:controls="using:TidalUi3.Controls"
+    mc:Ignorable="d"
+>
+
+    <Grid>
+        <controls:LoadingOverlayControl x:Name="DetailLoading" />
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,16,0">
+            <StackPanel Spacing="24" Padding="36,24,36,120">
+
+                <!-- Navigation -->
+                <controls:BackButtonControl ShowLabel="True" />
+
+                <!-- Header -->
+                <Grid ColumnSpacing="24">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="180" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <controls:ImagePlaceholderControl
+                        x:Name="HeaderCoverControl"
+                        Width="180"
+                        Height="180"
+                        FallbackGlyph="&#xE8D6;"
+                        IconSize="48"
+                        ImageCornerRadius="8"
+                    />
+                    <StackPanel
+                        Grid.Column="1"
+                        VerticalAlignment="Center"
+                        Spacing="8"
+                    >
+                        <TextBlock
+                            x:Name="HeaderTitle"
+                            Style="{StaticResource TitleTextBlockStyle}"
+                            TextWrapping="Wrap"
+                        />
+                        <TextBlock
+                            x:Name="HeaderSubtitle"
+                            Style="{StaticResource BodyTextBlockStyle}"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        />
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <controls:IconButtonControl
+                                x:Name="PlayAllButton"
+                                x:Uid="PlaylistHeader_PlayAll"
+                                Glyph="&#xE768;"
+                                IsAccent="True"
+                                Click="PlayAllButton_Click"
+                            />
+                            <controls:IconButtonControl
+                                x:Name="ShufflePlayButton"
+                                x:Uid="PlaylistHeader_Shuffle"
+                                Glyph="&#xE8B1;"
+                                Click="ShufflePlayButton_Click"
+                            />
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Column Headers -->
+                <controls:TrackListHeaderControl
+                    AlbumColumnWidth="0.6*"
+                    Margin="0,8,0,-16"
+                />
+
+                <!-- Track list -->
+                <ListView
+                    x:Name="TracksList"
+                    SelectionMode="None"
+                    IsItemClickEnabled="True"
+                    ItemClick="TrackItem_Click"
+                    RightTapped="TrackItem_RightTapped"
+                >
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <controls:TrackListItemControl
+                                ShowHeart="False"
+                                AlbumColumnWidth="0.6*"
+                            />
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>

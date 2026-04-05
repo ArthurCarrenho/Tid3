@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<UserControl
+    x:Class="TidalUi3.Controls.TrackListHeaderControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Padding="4,0" ColumnSpacing="14">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition x:Name="RowNumberColumnDef" Width="32" />
+            <ColumnDefinition Width="48" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition x:Name="AlbumColumnDef" Width="0.5*" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition x:Name="HeartColumnDef" Width="0" />
+            <ColumnDefinition Width="56" />
+        </Grid.ColumnDefinitions>
+        <TextBlock x:Name="RowNumberHeader" x:Uid="TrackListHeader_Number" HorizontalAlignment="Center"
+                   Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                   Style="{StaticResource CaptionTextBlockStyle}" />
+        <TextBlock Grid.Column="2" x:Uid="TrackListHeader_Title"
+                   Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                   Style="{StaticResource CaptionTextBlockStyle}" />
+        <TextBlock x:Name="AlbumHeader" Grid.Column="3" x:Uid="TrackListHeader_Album"
+                   Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                   Style="{StaticResource CaptionTextBlockStyle}" />
+        <TextBlock Grid.Column="4" x:Uid="TrackListHeader_Quality" Margin="0,0,8,0"
+                   Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                   Style="{StaticResource CaptionTextBlockStyle}" />
+        <FontIcon Grid.Column="6" Glyph="&#xE121;" FontSize="12" HorizontalAlignment="Center"
+                  Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+    </Grid>
+</UserControl>

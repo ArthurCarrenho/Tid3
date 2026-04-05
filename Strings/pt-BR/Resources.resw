@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  
+  <!-- MainWindow -->
+  <data name="NavHome.Content" xml:space="preserve"><value>Início</value></data>
+  <data name="NavLibrary.Content" xml:space="preserve"><value>Sua Biblioteca</value></data>
+  
+  <!-- HomePage -->
+  <data name="HomeHeader.Text" xml:space="preserve"><value>Início</value></data>
+
+  <!-- SettingsPage -->
+  <data name="SettingsHeader.Text" xml:space="preserve"><value>Configurações</value></data>
+  
+  <data name="SettingsAccount.Text" xml:space="preserve"><value>Conta</value></data>
+  <data name="LogoutButtonText.Text" xml:space="preserve"><value>Sair</value></data>
+  
+  <data name="SettingsPlayback.Text" xml:space="preserve"><value>Reprodução</value></data>
+  
+  <data name="SettingsLanguageTitle" xml:space="preserve"><value>Idioma do app</value></data>
+  <data name="SettingsLanguageDescription" xml:space="preserve"><value>Escolha seu idioma de preferência</value></data>
+  <data name="SettingsLanguageRestart.Message" xml:space="preserve"><value>Por favor, reinicie o app para aplicar a mudança de idioma.</value></data>
+  <data name="SettingsLanguageCard.Title" xml:space="preserve"><value>Idioma do app</value></data>
+  <data name="SettingsLanguageCard.Description" xml:space="preserve"><value>Escolha seu idioma de preferência</value></data>
+  <data name="SettingsLanguageRestart.Title" xml:space="preserve"><value>Reinicialização necessária</value></data>
+  
+  <data name="SettingsAppearance.Text" xml:space="preserve"><value>Aparência</value></data>
+  <data name="SettingsIntegrations.Text" xml:space="preserve"><value>Integrações</value></data>
+  <data name="SettingsGeneral.Text" xml:space="preserve"><value>Geral</value></data>
+  <data name="SettingsStorage.Text" xml:space="preserve"><value>Armazenamento</value></data>
+  <data name="SettingsAbout.Text" xml:space="preserve"><value>Sobre</value></data>
+  
+  <data name="SettingsPlayback_AudioQuality.Title" xml:space="preserve"><value>Qualidade de áudio</value></data>
+  <data name="SettingsPlayback_AudioQuality.Description" xml:space="preserve"><value>Selecione a qualidade de transmissão para novas faixas</value></data>
+  <data name="SettingsPlayback_QualityLow.Content" xml:space="preserve"><value>Baixa</value></data>
+  <data name="SettingsPlayback_QualityHigh.Content" xml:space="preserve"><value>Alta</value></data>
+  <data name="SettingsPlayback_QualityMax.Content" xml:space="preserve"><value>Máxima</value></data>
+  <data name="SettingsPlayback_TrackRadio.Title" xml:space="preserve"><value>Rádio da faixa</value></data>
+  <data name="SettingsPlayback_TrackRadio.Description" xml:space="preserve"><value>Tocar faixas semelhantes quando a fila terminar</value></data>
+  <data name="SettingsPlayback_Gapless.Title" xml:space="preserve"><value>Reprodução sem pausas</value></data>
+  <data name="SettingsPlayback_Gapless.Description" xml:space="preserve"><value>Transições suaves entre faixas de um álbum</value></data>
+  <data name="SettingsPlayback_Crossfade.Title" xml:space="preserve"><value>Crossfade</value></data>
+  <data name="SettingsPlayback_Crossfade.Description" xml:space="preserve"><value>Mistura as faixas durante as transições</value></data>
+  <data name="SettingsPlayback_Normalize.Title" xml:space="preserve"><value>Normalizar volume</value></data>
+  <data name="SettingsPlayback_Normalize.Description" xml:space="preserve"><value>Mantém níveis de volume consistentes entre as faixas</value></data>
+  <data name="SettingsPlayback_Crossfade_Off" xml:space="preserve"><value>Desligado</value></data>
+  
+  <data name="SettingsAppearance_Theme.Title" xml:space="preserve"><value>Tema</value></data>
+  <data name="SettingsAppearance_Theme.Description" xml:space="preserve"><value>Escolha o seu esquema de cores preferido</value></data>
+  <data name="SettingsAppearance_Theme_System.Content" xml:space="preserve"><value>Padrão do sistema</value></data>
+  <data name="SettingsAppearance_Theme_Light.Content" xml:space="preserve"><value>Claro</value></data>
+  <data name="SettingsAppearance_Theme_Dark.Content" xml:space="preserve"><value>Escuro</value></data>
+  <data name="SettingsAppearance_Language_System.Content" xml:space="preserve"><value>Padrão do Sistema</value></data>
+
+  <data name="SettingsIntegrations_LastFm.Text" xml:space="preserve"><value>Scrobbling do Last.fm</value></data>
+  <data name="SettingsIntegrations_LastFm_Status.Text" xml:space="preserve"><value>Não conectado</value></data>
+  <data name="SettingsIntegrations_LastFm_Connected" xml:space="preserve"><value>Conectado — scrobbling ativo</value></data>
+  <data name="SettingsIntegrations_LastFm_Connect.Text" xml:space="preserve"><value>Conectar</value></data>
+  <data name="SettingsIntegrations_LastFm_Disconnect" xml:space="preserve"><value>Desconectar</value></data>
+  <data name="SettingsIntegrations_LastFm_GettingToken" xml:space="preserve"><value>Obtendo token...</value></data>
+  <data name="SettingsIntegrations_LastFm_FailedToken" xml:space="preserve"><value>Falha ao obter token de autenticação.</value></data>
+  <data name="SettingsIntegrations_LastFm_AuthorizePrompt" xml:space="preserve"><value>Autorize em seu navegador...</value></data>
+  <data name="SettingsIntegrations_LastFm_TimedOut" xml:space="preserve"><value>Tempo esgotado. Por favor, tente novamente.</value></data>
+  <data name="SettingsIntegrations_LastFm_Error" xml:space="preserve"><value>Erro: </value></data>
+
+  <data name="SettingsIntegrations_CloudSync.Text" xml:space="preserve"><value>Sincronização na nuvem</value></data>
+  <data name="SettingsIntegrations_CloudSync_Desc.Text" xml:space="preserve"><value>Sincronizar estado de reprodução entre dispositivos</value></data>
+  <data name="SettingsIntegrations_CloudSync_Server.Header" xml:space="preserve"><value>URL do Servidor</value></data>
+  <data name="SettingsIntegrations_CloudSync_Server_Placeholder.PlaceholderText" xml:space="preserve"><value>wss://your-worker.workers.dev</value></data>
+  <data name="SettingsIntegrations_CloudSync_Footer.Text" xml:space="preserve"><value>Usa Cloudflare Workers para sincronizar fila, posição e estado de reprodução em tempo real.</value></data>
+  <data name="SettingsIntegrations_Discord.Title" xml:space="preserve"><value>Presença Rica do Discord</value></data>
+  <data name="SettingsIntegrations_Discord.Description" xml:space="preserve"><value>Mostre o que você está ouvindo no seu perfil do Discord</value></data>
+
+  <data name="SettingsGeneral_Startup.Title" xml:space="preserve"><value>Iniciar com o Windows</value></data>
+  <data name="SettingsGeneral_Startup.Description" xml:space="preserve"><value>Iniciar Tid3 automaticamente ao fazer login</value></data>
+  <data name="SettingsGeneral_Tray.Title" xml:space="preserve"><value>Minimizar para a bandeja</value></data>
+  <data name="SettingsGeneral_Tray.Description" xml:space="preserve"><value>Continuar tocando quando você fechar a janela</value></data>
+  <data name="SettingsGeneral_Notifications.Title" xml:space="preserve"><value>Notificações</value></data>
+  <data name="SettingsGeneral_Notifications.Description" xml:space="preserve"><value>Mostrar uma notificação quando uma nova faixa começar</value></data>
+
+  <data name="SettingsStorage_Cache.Title" xml:space="preserve"><value>Cache de imagens</value></data>
+  <data name="SettingsStorage_Cache_Calculating.Text" xml:space="preserve"><value>Calculando...</value></data>
+  <data name="SettingsStorage_Cache_Clear.Text" xml:space="preserve"><value>Limpar</value></data>
+  <data name="SettingsStorage_Cache_SizeUsed" xml:space="preserve"><value> MB usados</value></data>
+
+  <data name="SettingsAccount_FailedLoad" xml:space="preserve"><value>Falha ao carregar perfil.</value></data>
+
+  <data name="SettingsAbout_Version_Prefix" xml:space="preserve"><value>Versão </value></data>
+  <data name="SettingsAbout_Description.Text" xml:space="preserve"><value>Uma experiência moderna de streaming de música.</value></data>
+  <data name="SettingsAccount_Loading.Text" xml:space="preserve"><value>Carregando conta...</value></data>
+  <data name="SettingsAccount_UserId_Format" xml:space="preserve"><value>ID {0}</value></data>
+  <data name="SettingsAccount_UserDefault" xml:space="preserve"><value>Usuário</value></data>
+
+  <!-- Queue Panel -->
+  <data name="QueueHeader.Text" xml:space="preserve"><value>Fila</value></data>
+  <data name="QueueClearButton.ToolTipService.ToolTip" xml:space="preserve"><value>Limpar Fila</value></data>
+  <data name="QueueCloseButton.ToolTipText" xml:space="preserve"><value>Fechar Fila</value></data>
+  <data name="QueueHistory.Text" xml:space="preserve"><value>Histórico</value></data>
+  <data name="QueueNowPlaying.Text" xml:space="preserve"><value>Tocando agora</value></data>
+  <data name="QueueUpNext.Text" xml:space="preserve"><value>A seguir</value></data>
+  <data name="QueueEmpty.Title" xml:space="preserve"><value>A fila está vazia</value></data>
+  <data name="QueueContext_GoToArtist.Text" xml:space="preserve"><value>Ir para Artista</value></data>
+  <data name="QueueContext_GoToAlbum.Text" xml:space="preserve"><value>Ir para Álbum</value></data>
+  <data name="QueueContext_Remove.Text" xml:space="preserve"><value>Remover da Fila</value></data>
+  <data name="QueueRemoveButton.ToolTipService.ToolTip" xml:space="preserve"><value>Remover</value></data>
+
+  <!-- Lyrics Panel -->
+  <data name="LyricsHeader.Text" xml:space="preserve"><value>Letras</value></data>
+  <data name="LyricsCloseButton.ToolTipText" xml:space="preserve"><value>Fechar Letras</value></data>
+  <data name="LyricsEmpty.Title" xml:space="preserve"><value>Nenhuma letra disponível</value></data>
+
+  <!-- Playback Bar -->
+  <data name="PlaybackBar_Context_GoToArtist.Text" xml:space="preserve"><value>Ir para Artista</value></data>
+  <data name="PlaybackBar_Context_GoToAlbum.Text" xml:space="preserve"><value>Ir para Álbum</value></data>
+  <data name="PlaybackBar_Like.ToolTipService.ToolTip" xml:space="preserve"><value>Curtir</value></data>
+  <data name="PlaybackBar_Devices.ToolTipService.ToolTip" xml:space="preserve"><value>Conectar a um dispositivo</value></data>
+  <data name="PlaybackBar_Devices_Header.Text" xml:space="preserve"><value>Conectar a um dispositivo</value></data>
+  <data name="PlaybackBar_Devices_None.Visibility" xml:space="preserve"><value>Visible</value></data>
+  <data name="PlaybackBar_Devices_None.Text" xml:space="preserve"><value>Nenhum outro dispositivo ativo encontrado.</value></data>
+  <data name="PlaybackBar_Devices_ActiveNow.Text" xml:space="preserve"><value>Ativo agora</value></data>
+  <data name="PlaybackBar_Devices_SyncSettings.Content" xml:space="preserve"><value>Configurações de Sincronização</value></data>
+  <data name="PlaybackBar_Lyrics.ToolTipService.ToolTip" xml:space="preserve"><value>Letras</value></data>
+  <data name="PlaybackBar_Queue.ToolTipService.ToolTip" xml:space="preserve"><value>Fila</value></data>
+
+  <!-- Search -->
+  <data name="SearchBox_Placeholder.PlaceholderText" xml:space="preserve"><value>O que você quer ouvir?</value></data>
+  <data name="SearchHeader_Artists.Text" xml:space="preserve"><value>Artistas</value></data>
+  <data name="SearchHeader_Albums.Text" xml:space="preserve"><value>Álbuns</value></data>
+  <data name="SearchHeader_Songs.Text" xml:space="preserve"><value>Músicas</value></data>
+  <data name="SearchHeader_BrowseAll.Text" xml:space="preserve"><value>Navegar por tudo</value></data>
+  <data name="SearchResults_Title" xml:space="preserve"><value>Resultados para "{0}"</value></data>
+  <data name="SearchResults_None" xml:space="preserve"><value>Nenhum resultado para "{0}"</value></data>
+  <data name="SearchResults_Failed" xml:space="preserve"><value>Falha na busca. Tente novamente.</value></data>
+  <data name="PageHeader_Search.SearchPlaceholder" xml:space="preserve"><value>Buscar</value></data>
+
+  <!-- Track List Header -->
+  <data name="TrackListHeader_Number.Text" xml:space="preserve"><value>#</value></data>
+  <data name="TrackListHeader_Title.Text" xml:space="preserve"><value>Título</value></data>
+  <data name="TrackListHeader_Album.Text" xml:space="preserve"><value>Álbum</value></data>
+  <data name="TrackListHeader_Quality.Text" xml:space="preserve"><value>Qualidade</value></data>
+
+  <!-- ArtistPage -->
+  <data name="ArtistHeader_ArtText.Text" xml:space="preserve"><value>ARTISTA</value></data>
+  <data name="ArtistHeader_PlayButton.Text" xml:space="preserve"><value>Tocar</value></data>
+  <data name="ArtistHeader_ShuffleButton.Text" xml:space="preserve"><value>Aleatório</value></data>
+  <data name="ArtistBio_Title.Text" xml:space="preserve"><value>Sobre</value></data>
+  <data name="ArtistBio_ShowMore.Content" xml:space="preserve"><value>Mostrar mais</value></data>
+  <data name="ArtistTopTracks_Title.Text" xml:space="preserve"><value>Mais tocadas</value></data>
+  <data name="ArtistAlbums_Title" xml:space="preserve"><value>Álbuns</value></data>
+  <data name="ArtistSingles_Title" xml:space="preserve"><value>Singles e EPs</value></data>
+  <data name="ArtistAppearsOn_Title" xml:space="preserve"><value>Aparece em</value></data>
+  <data name="Artist_LoadError" xml:space="preserve"><value>Falha ao carregar artista</value></data>
+  <data name="Artist_AlbumType_Album" xml:space="preserve"><value>Álbum</value></data>
+  <data name="Artist_AlbumType_Single" xml:space="preserve"><value>Single</value></data>
+  <data name="Artist_AlbumType_EP" xml:space="preserve"><value>EP</value></data>
+  <data name="Artist_Quality_Atmos" xml:space="preserve"><value>Atmos</value></data>
+  <data name="Artist_Quality_HiRes" xml:space="preserve"><value>Hi-Res</value></data>
+  <data name="Artist_Bio_ShowLess" xml:space="preserve"><value>Mostrar menos</value></data>
+  <data name="Artist_Bio_ShowMore" xml:space="preserve"><value>Mostrar mais</value></data>
+
+  <!-- PlaylistDetailPage -->
+  <data name="PlaylistHeader_PlayAll.Text" xml:space="preserve"><value>Tocar tudo</value></data>
+  <data name="PlaylistHeader_Shuffle.Text" xml:space="preserve"><value>Aleatório</value></data>
+  <data name="PlaylistDetail_Tracks" xml:space="preserve"><value>{0} músicas</value></data>
+  <data name="PlaylistDetail_Mix" xml:space="preserve"><value>MIX</value></data>
+  <data name="PlaylistDetail_LoadError_Playlist" xml:space="preserve"><value>Falha ao carregar playlist ou mix</value></data>
+  <data name="PlaylistDetail_LoadError_Album" xml:space="preserve"><value>Falha ao carregar álbum</value></data>
+  <data name="PlaylistDetail_LoadError_Radio" xml:space="preserve"><value>Falha ao carregar rádio</value></data>
+  <data name="PlaylistDetail_UnknownAlbum" xml:space="preserve"><value>Álbum Desconhecido</value></data>
+  <data name="PlaylistDetail_RadioTitle" xml:space="preserve"><value>Rádio: {0}</value></data>
+  <data name="PlaylistDetail_VariousArtists" xml:space="preserve"><value>Vários Artistas</value></data>
+
+  <!-- LibraryPage -->
+  <data name="LibraryHeader.Text" xml:space="preserve"><value>Sua Biblioteca</value></data>
+  <data name="LibraryPlaylists_Title.Text" xml:space="preserve"><value>Suas Playlists</value></data>
+  <data name="LibraryPlaylists_TrackCount" xml:space="preserve"><value> faixas</value></data>
+  <data name="LibraryAlbums_Title" xml:space="preserve"><value>Álbuns Salvos</value></data>
+  <data name="LibraryLikedSongs_Title.Text" xml:space="preserve"><value>Músicas Curtidas</value></data>
+  <data name="Library_UnknownArtist" xml:space="preserve"><value>Artista Desconhecido</value></data>
+
+  <!-- LoginPage -->
+  <data name="LoginInstruction_Title.Text" xml:space="preserve"><value>Entre em sua conta</value></data>
+  <data name="LoginInstruction_Body.Text" xml:space="preserve"><value>Para conectar, insira o código abaixo no link em seu navegador.</value></data>
+  <data name="LoginCode_YourCode.Text" xml:space="preserve"><value>Seu código</value></data>
+  <data name="LoginCode_CopyButton.Text" xml:space="preserve"><value>Copiar código</value></data>
+  <data name="LoginVisit_Title.Text" xml:space="preserve"><value>Então visite</value></data>
+  <data name="LoginStatus_Waiting" xml:space="preserve"><value>Aguardando autorização...</value></data>
+  <data name="LoginRefresh_Button.Text" xml:space="preserve"><value>Obter novo código</value></data>
+  <data name="LoginExpiry_Prefix" xml:space="preserve"><value>O código expira em </value></data>
+  <data name="LoginStatus_Success" xml:space="preserve"><value>Sucesso! Redirecionando...</value></data>
+  <data name="LoginStatus_Expired" xml:space="preserve"><value>Código expirado. Obtenha um novo código.</value></data>
+  <data name="LoginStatus_Denied" xml:space="preserve"><value>A autorização foi negada.</value></data>
+  <data name="LoginStatus_Connecting" xml:space="preserve"><value>Conectando...</value></data>
+  <data name="LoginCopy_Copied" xml:space="preserve"><value>Copiado!</value></data>
+  <data name="LoginCopy_Default" xml:space="preserve"><value>Copiar código</value></data>
+
+  <!-- Discord RPC -->
+  <data name="Discord_By" xml:space="preserve"><value>de </value></data>
+  <data name="Discord_Listening" xml:space="preserve"><value>Ouvindo</value></data>
+  <data name="SettingsIntegrations_CloudSync_Testing" xml:space="preserve">
+    <value>Testando conexão...</value>
+  </data>
+  <data name="SettingsIntegrations_CloudSync_Connected" xml:space="preserve">
+    <value>Conectado</value>
+  </data>
+  <data name="SettingsIntegrations_CloudSync_Failed" xml:space="preserve">
+    <value>Não conectado</value>
+  </data>
+  <data name="SettingsIntegrations_CloudSync_StatusDisabled" xml:space="preserve">
+    <value>Sincronização desativada</value>
+  </data>
+  <data name="SettingsIntegrations_CloudSync_ThisDevice" xml:space="preserve">
+    <value>Este dispositivo: </value>
+  </data>
+  <data name="SettingsIntegrations_CloudSync_DeviceCount" xml:space="preserve">
+    <value>{0} outro(s) dispositivo(s) ativo(s)</value>
+  </data>
+  <data name="SettingsIntegrations_CloudSync_Reconnect.Text" xml:space="preserve">
+    <value>Reconectar</value>
+  </data>
+  <data name="PlaybackBar_Devices_OtherDevices.Text" xml:space="preserve">
+    <value>Outros dispositivos</value>
+  </data>
+  <data name="PlaybackBar_Devices_Transfer.Text" xml:space="preserve">
+    <value>Transferir reprodução</value>
+  </data>
+  <data name="PlaybackBar_Devices_ListeningHere" xml:space="preserve">
+    <value>Ouvindo aqui</value>
+  </data>
+  <data name="PlaybackBar_Devices_SyncDisconnected" xml:space="preserve">
+    <value>Sincronização desconectada</value>
+  </data>
+</root>

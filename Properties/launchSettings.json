@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "TidalUi3 (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "TidalUi3 (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

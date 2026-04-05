@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="TidalUi3.Pages.ArtistPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:converters="using:TidalUi3.Converters"
+    xmlns:controls="using:TidalUi3.Controls"
+    mc:Ignorable="d"
+>
+
+    <Grid>
+        <controls:LoadingOverlayControl x:Name="ArtistLoading" />
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,16,0">
+            <StackPanel Spacing="28" Padding="36,24,36,120">
+
+                <!-- Back button -->
+                <controls:BackButtonControl />
+
+                <!-- Artist Header -->
+                <Grid ColumnSpacing="28">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="200" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <controls:ImagePlaceholderControl
+                        x:Name="ArtistImageControl"
+                        Width="200"
+                        Height="200"
+                        FallbackGlyph="&#xE77B;"
+                        IconSize="56"
+                        ImageCornerRadius="100"
+                    />
+
+                    <StackPanel
+                        Grid.Column="1"
+                        VerticalAlignment="Center"
+                        Spacing="6"
+                    >
+                        <TextBlock
+                            x:Uid="ArtistHeader_ArtText"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            FontWeight="SemiBold"
+                            CharacterSpacing="120"
+                        />
+                        <TextBlock
+                            x:Name="ArtistName"
+                            Style="{StaticResource TitleLargeTextBlockStyle}"
+                            TextWrapping="Wrap"
+                        />
+                        <TextBlock
+                            x:Name="ArtistRoles"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Visibility="Collapsed"
+                        />
+
+                        <StackPanel
+                            Orientation="Horizontal"
+                            Spacing="12"
+                            Margin="0,10,0,0"
+                        >
+                            <controls:IconButtonControl
+                                x:Name="PlayButton"
+                                x:Uid="ArtistHeader_PlayButton"
+                                Glyph="&#xE768;"
+                                IsAccent="True"
+                                Click="PlayButton_Click"
+                            />
+                            <controls:IconButtonControl
+                                x:Name="ShuffleButton"
+                                x:Uid="ArtistHeader_ShuffleButton"
+                                Glyph="&#xE8B1;"
+                                Click="ShuffleButton_Click"
+                            />
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Bio Section -->
+                <StackPanel
+                    x:Name="BioSection"
+                    Spacing="8"
+                    Visibility="Collapsed"
+                >
+                    <TextBlock
+                        x:Uid="ArtistBio_Title"
+                        Style="{StaticResource SubtitleTextBlockStyle}"
+                    />
+                    <TextBlock
+                        x:Name="BioText"
+                        TextWrapping="Wrap"
+                        MaxLines="4"
+                        Style="{StaticResource BodyTextBlockStyle}"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    />
+                    <HyperlinkButton
+                        x:Name="BioToggle"
+                        x:Uid="ArtistBio_ShowMore"
+                        Click="BioToggle_Click"
+                        Padding="0"
+                    />
+                </StackPanel>
+
+                <!-- Top Tracks -->
+                <StackPanel Spacing="8">
+                    <TextBlock
+                        x:Uid="ArtistTopTracks_Title"
+                        Style="{StaticResource SubtitleTextBlockStyle}"
+                    />
+                    <ListView
+                        x:Name="TopTracksList"
+                        SelectionMode="None"
+                        IsItemClickEnabled="True"
+                        ItemClick="TrackItem_Click"
+                        RightTapped="TrackItem_RightTapped"
+                    >
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <controls:TrackListItemControl
+                                    ShowAlbum="False"
+                                    ShowHeart="False"
+                                />
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </StackPanel>
+
+                <!-- Albums -->
+                <controls:CarouselSectionControl
+                    x:Name="AlbumsCarousel"
+                    x:Uid="ArtistAlbums"
+                    Visibility="Collapsed"
+                    ItemClick="AlbumItem_Click"
+                >
+                    <controls:CarouselSectionControl.ItemTemplate>
+                        <DataTemplate>
+                            <controls:MediaCardControl
+                                CardWidth="180"
+                                TitleText="{Binding Title}"
+                                SubtitleText="{Binding Subtitle}"
+                                ImageUrl="{Binding CoverUrl}"
+                                FallbackGlyph="&#xE93C;"
+                                IsExplicit="{Binding IsExplicit}"
+                            />
+                        </DataTemplate>
+                    </controls:CarouselSectionControl.ItemTemplate>
+                </controls:CarouselSectionControl>
+
+                <!-- Singles & EPs -->
+                <controls:CarouselSectionControl
+                    x:Name="SinglesCarousel"
+                    x:Uid="ArtistSingles"
+                    Visibility="Collapsed"
+                    ItemClick="AlbumItem_Click"
+                >
+                    <controls:CarouselSectionControl.ItemTemplate>
+                        <DataTemplate>
+                            <controls:MediaCardControl
+                                CardWidth="180"
+                                TitleText="{Binding Title}"
+                                SubtitleText="{Binding Subtitle}"
+                                ImageUrl="{Binding CoverUrl}"
+                                FallbackGlyph="&#xE93C;"
+                                IsExplicit="{Binding IsExplicit}"
+                            />
+                        </DataTemplate>
+                    </controls:CarouselSectionControl.ItemTemplate>
+                </controls:CarouselSectionControl>
+
+                <!-- Appears On -->
+                <controls:CarouselSectionControl
+                    x:Name="AppearsOnCarousel"
+                    x:Uid="ArtistAppearsOn"
+                    Visibility="Collapsed"
+                    ItemClick="AlbumItem_Click"
+                >
+                    <controls:CarouselSectionControl.ItemTemplate>
+                        <DataTemplate>
+                            <controls:MediaCardControl
+                                CardWidth="180"
+                                TitleText="{Binding Title}"
+                                SubtitleText="{Binding Subtitle}"
+                                ImageUrl="{Binding CoverUrl}"
+                                FallbackGlyph="&#xE93C;"
+                                IsExplicit="{Binding IsExplicit}"
+                            />
+                        </DataTemplate>
+                    </controls:CarouselSectionControl.ItemTemplate>
+                </controls:CarouselSectionControl>
+
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>
