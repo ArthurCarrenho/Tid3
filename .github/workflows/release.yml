@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - "v*.*.*"
 
 permissions:
   contents: write
@@ -29,19 +29,33 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: "8.0.x"
+
+      - name: Detect certificate secret
+        id: certdetect
+        shell: pwsh
+        env:
+          CERT_PFX: ${{ secrets.CERTIFICATE_PFX }}
+        run: |
+          if ($env:CERT_PFX -ne "") {
+            echo "has_cert=true" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "has_cert=false" >> $env:GITHUB_OUTPUT
+          }
 
       - name: Decode signing certificate
-        if: secrets.CERTIFICATE_PFX != ''
+        if: steps.certdetect.outputs.has_cert == 'true'
         id: cert
         shell: pwsh
+        env:
+          CERT_PFX: ${{ secrets.CERTIFICATE_PFX }}
         run: |
           $certPath = "$env:RUNNER_TEMP\certificate.pfx"
-          [System.IO.File]::WriteAllBytes($certPath, [System.Convert]::FromBase64String("${{ secrets.CERTIFICATE_PFX }}"))
+          [System.IO.File]::WriteAllBytes($certPath, [System.Convert]::FromBase64String($env:CERT_PFX))
           echo "path=$certPath" >> $env:GITHUB_OUTPUT
 
       - name: Generate self-signed certificate (no secret provided)
-        if: secrets.CERTIFICATE_PFX == ''
+        if: steps.certdetect.outputs.has_cert == 'false'
         id: selfsign
         shell: pwsh
         run: |
@@ -61,10 +75,12 @@ jobs:
       - name: Set certificate variables
         id: certinfo
         shell: pwsh
+        env:
+          CERT_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
         run: |
-          if ("${{ secrets.CERTIFICATE_PFX }}" -ne "") {
+          if ("${{ steps.certdetect.outputs.has_cert }}" -eq "true") {
             echo "path=${{ steps.cert.outputs.path }}" >> $env:GITHUB_OUTPUT
-            echo "password=${{ secrets.CERTIFICATE_PASSWORD }}" >> $env:GITHUB_OUTPUT
+            echo "password=$env:CERT_PASSWORD" >> $env:GITHUB_OUTPUT
           } else {
             echo "path=${{ steps.selfsign.outputs.path }}" >> $env:GITHUB_OUTPUT
             echo "password=${{ steps.selfsign.outputs.password }}" >> $env:GITHUB_OUTPUT
