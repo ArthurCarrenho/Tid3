@@ -15,6 +15,11 @@
   <ItemGroup>
     <Compile Include="..\..\Models\Track.cs" Link="App\Track.cs" />
     <Compile Include="..\..\Models\QueueSection.cs" Link="App\QueueSection.cs" />
+    <Compile Include="..\..\Models\HomeSection.cs" Link="App\HomeSection.cs" />
+    <Compile Include="..\..\Models\NavigationRequests.cs" Link="App\NavigationRequests.cs" />
+    <Compile Include="..\..\Helpers\PageModules.cs" Link="App\PageModules.cs" />
+    <Compile Include="..\..\Helpers\PagedLoaders.cs" Link="App\PagedLoaders.cs" />
+    <Compile Include="..\..\Helpers\JsonImageExtractor.cs" Link="App\JsonImageExtractor.cs" />
     <Compile Include="..\..\Helpers\BulkObservableCollection.cs" Link="App\BulkObservableCollection.cs" />
     <Compile Include="..\..\Helpers\QueueRows.cs" Link="App\QueueRows.cs" />
     <Compile Include="..\..\Helpers\LoadingTrackListPlayer.cs" Link="App\LoadingTrackListPlayer.cs" />

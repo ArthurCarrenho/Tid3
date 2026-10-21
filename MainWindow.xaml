@@ -66,6 +66,14 @@
                             Icon="Home"
                         />
                         <NavigationViewItem
+                            x:Uid="NavExplore"
+                            Tag="explore"
+                        >
+                            <NavigationViewItem.Icon>
+                                <FontIcon Glyph="&#xE909;" />
+                            </NavigationViewItem.Icon>
+                        </NavigationViewItem>
+                        <NavigationViewItem
                             x:Uid="NavLibrary"
                             Tag="library"
                             Icon="Library"

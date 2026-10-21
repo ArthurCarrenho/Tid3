@@ -12,7 +12,6 @@
         <Button x:Name="ShuffleButton" Style="{StaticResource SubtleButtonStyle}"
                 Width="38" Height="38" Padding="4"
                 Click="ShuffleButton_Click"
-                x:Uid="Transport_Shuffle"
                 ToolTipService.ToolTip="Shuffle">
             <FontIcon x:Name="ShuffleIcon" Glyph="&#xE8B1;" FontSize="16"
                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -46,7 +45,6 @@
         <Button x:Name="RepeatButton" Style="{StaticResource SubtleButtonStyle}"
                 Width="38" Height="38" Padding="4"
                 Click="RepeatButton_Click"
-                x:Uid="Transport_Repeat"
                 ToolTipService.ToolTip="Repeat">
             <FontIcon x:Name="RepeatIcon" Glyph="&#xE8EE;" FontSize="16"
                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />

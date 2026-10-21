@@ -34,7 +34,7 @@
             Visibility="Collapsed"
         >
             <StackPanel.ContextFlyout>
-                <MenuFlyout>
+                <MenuFlyout Opening="NowPlayingMenu_Opening">
                     <MenuFlyoutItem x:Uid="PlaybackBar_Context_GoToArtist" Click="Context_GoToArtist_Click" />
                     <MenuFlyoutItem x:Uid="PlaybackBar_Context_GoToAlbum" Click="Context_GoToAlbum_Click" />
                 </MenuFlyout>
@@ -159,7 +159,6 @@
                 BorderThickness="0"
                 CornerRadius="19"
                 x:Uid="PlaybackBar_Devices"
-                Visibility="Collapsed"
             >
                 <Grid>
                     <FontIcon
@@ -170,6 +169,7 @@
                     <!-- Status Dot -->
                     <Ellipse
                         x:Name="SyncStatusDot"
+                        Visibility="Collapsed"
                         Width="8"
                         Height="8"
                         Fill="#FF4444" 
@@ -181,97 +181,123 @@
                     />
                 </Grid>
                 <Button.Flyout>
-                    <Flyout x:Name="DevicesFlyout">
+                    <Flyout x:Name="DevicesFlyout" Opening="DevicesFlyout_Opening">
                         <StackPanel Width="280" Spacing="8">
-                            <TextBlock x:Uid="PlaybackBar_Devices_Header" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="4,4,4,0"/>
-
-                            <!-- This Device -->
-                            <Grid
-                                Background="{ThemeResource SubtleFillColorSecondaryBrush}"
-                                CornerRadius="6"
-                                Padding="12,10"
+                            <!-- Where this computer plays -->
+                            <TextBlock x:Uid="PlaybackBar_AudioOutput_Header" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="4,4,4,0" />
+                            <ListView
+                                x:Name="OutputDevicesList"
+                                x:Uid="PlaybackBar_AudioOutput_List"
+                                SelectionMode="Single"
+                                MaxHeight="220"
+                                SelectionChanged="OutputDevicesList_SelectionChanged"
                             >
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <FontIcon
-                                    Glyph="&#xE770;"
-                                    FontSize="18"
-                                    VerticalAlignment="Center"
-                                    Margin="0,0,12,0"
-                                    Foreground="{ThemeResource AccentFillColorDefaultBrush}"
-                                />
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
-                                    <TextBlock x:Name="ThisDeviceName" Style="{StaticResource BodyStrongTextBlockStyle}" />
-                                    <TextBlock
-                                        x:Name="ThisDeviceStatus"
-                                        Style="{StaticResource CaptionTextBlockStyle}"
-                                        Foreground="{ThemeResource SystemFillColorSuccessBrush}"
-                                    />
-                                </StackPanel>
-                                <FontIcon
-                                    Grid.Column="2"
-                                    Glyph="&#xE8FB;"
-                                    FontSize="14"
-                                    VerticalAlignment="Center"
-                                    Foreground="{ThemeResource SystemFillColorSuccessBrush}"
-                                />
-                            </Grid>
-
-                            <!-- Other Devices -->
-                            <TextBlock
-                                x:Uid="PlaybackBar_Devices_OtherDevices"
-                                Style="{StaticResource CaptionTextBlockStyle}"
-                                Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                                Margin="4,0,4,0"
-                            />
-
-                            <TextBlock
-                                x:Name="NoDevicesText"
-                                x:Uid="PlaybackBar_Devices_None"
-                                Style="{StaticResource CaptionTextBlockStyle}"
-                                Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                                Margin="4,0,4,0"
-                                Visibility="Collapsed"
-                            />
-
-                            <ListView x:Name="DevicesListView" SelectionMode="None" BorderThickness="0">
                                 <ListView.ItemTemplate>
                                     <DataTemplate>
-                                        <Button
-                                            HorizontalAlignment="Stretch"
-                                            HorizontalContentAlignment="Left"
-                                            Background="Transparent"
-                                            BorderThickness="0"
-                                            Padding="8,10"
-                                            Click="DeviceItem_Click"
-                                        >
-                                            <Grid ColumnSpacing="12">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <FontIcon Glyph="&#xE770;" FontSize="18" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding Name}" Style="{StaticResource BodyStrongTextBlockStyle}" />
-                                                    <TextBlock x:Uid="PlaybackBar_Devices_Transfer" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
-                                                </StackPanel>
-                                            </Grid>
-                                        </Button>
+                                        <Grid ColumnSpacing="12" Padding="0,6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <FontIcon Glyph="&#xE7F5;" FontSize="16" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                        </Grid>
                                     </DataTemplate>
                                 </ListView.ItemTemplate>
                             </ListView>
 
-                            <!-- Settings Link -->
-                            <Button
-                                x:Uid="PlaybackBar_Devices_SyncSettings"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Center"
-                                Click="SyncSettingsButton_Click"
-                                Margin="0,4,0,0"
-                            />
+                            <!-- Other devices signed in through sync -->
+                            <StackPanel x:Name="SyncDevicesPanel" Spacing="8" Visibility="Collapsed">
+                                <TextBlock x:Uid="PlaybackBar_Devices_Header" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="4,12,4,0"/>
+
+                                <!-- This Device -->
+                                <Grid
+                                    Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                    CornerRadius="6"
+                                    Padding="12,10"
+                                >
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon
+                                        Glyph="&#xE770;"
+                                        FontSize="18"
+                                        VerticalAlignment="Center"
+                                        Margin="0,0,12,0"
+                                        Foreground="{ThemeResource AccentFillColorDefaultBrush}"
+                                    />
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                                        <TextBlock x:Name="ThisDeviceName" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                        <TextBlock
+                                            x:Name="ThisDeviceStatus"
+                                            Style="{StaticResource CaptionTextBlockStyle}"
+                                            Foreground="{ThemeResource SystemFillColorSuccessBrush}"
+                                        />
+                                    </StackPanel>
+                                    <FontIcon
+                                        Grid.Column="2"
+                                        Glyph="&#xE8FB;"
+                                        FontSize="14"
+                                        VerticalAlignment="Center"
+                                        Foreground="{ThemeResource SystemFillColorSuccessBrush}"
+                                    />
+                                </Grid>
+
+                                <!-- Other Devices -->
+                                <TextBlock
+                                    x:Uid="PlaybackBar_Devices_OtherDevices"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                    Margin="4,0,4,0"
+                                />
+
+                                <TextBlock
+                                    x:Name="NoDevicesText"
+                                    x:Uid="PlaybackBar_Devices_None"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                    Margin="4,0,4,0"
+                                    Visibility="Collapsed"
+                                />
+
+                                <ListView x:Name="DevicesListView" SelectionMode="None" BorderThickness="0">
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button
+                                                HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Left"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Padding="8,10"
+                                                Click="DeviceItem_Click"
+                                            >
+                                                <Grid ColumnSpacing="12">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <FontIcon Glyph="&#xE770;" FontSize="18" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Name}" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                                        <TextBlock x:Uid="PlaybackBar_Devices_Transfer" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+
+                                <!-- Settings Link -->
+                                <Button
+                                    x:Uid="PlaybackBar_Devices_SyncSettings"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center"
+                                    Click="SyncSettingsButton_Click"
+                                    Margin="0,4,0,0"
+                                />
+                            </StackPanel>
                         </StackPanel>
                     </Flyout>
                 </Button.Flyout>

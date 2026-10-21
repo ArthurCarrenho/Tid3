@@ -80,6 +80,7 @@ namespace TidalUi3.Controls
                 control.ShuffleIcon.Foreground = control.IsShuffled
                     ? (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"]
                     : (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
+                control.UpdateModeLabels();
             }
         }
 
@@ -105,13 +106,27 @@ namespace TidalUi3.Controls
                         control.RepeatIcon.Foreground = accentBrush;
                         break;
                 }
+                control.UpdateModeLabels();
             }
+        }
+
+        // The icon's color is the only other sign of these modes, which screen readers can't see.
+        private void UpdateModeLabels()
+        {
+            Loc.Label(ShuffleButton, Loc.Get(IsShuffled ? "Transport_ShuffleOn" : "Transport_ShuffleOff"));
+            Loc.Label(RepeatButton, Loc.Get(RepeatMode switch
+            {
+                RepeatMode.All => "Transport_RepeatAll",
+                RepeatMode.One => "Transport_RepeatOne",
+                _ => "Transport_RepeatOff",
+            }));
         }
 
         public TransportControls()
         {
             this.InitializeComponent();
             UpdatePlayPause();
+            UpdateModeLabels();
         }
 
         private void UpdatePlayPause()

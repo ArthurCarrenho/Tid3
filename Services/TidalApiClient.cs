@@ -256,20 +256,6 @@ public sealed class TidalApiClient : IDisposable
         return (responseBody, (int)response.StatusCode);
     }
 
-    // ──────────────────────────────────────────────
-    //  For You
-    // ──────────────────────────────────────────────
-
-    public async Task<System.Text.Json.JsonElement> GetForYouPageAsync(CancellationToken ct = default)
-    {
-        return await GetAsync<System.Text.Json.JsonElement>($"pages/for_you?countryCode={_countryCode}&deviceType=BROWSER", ct);
-    }
-
-    public async Task<System.Text.Json.JsonElement> GetRawAsync(string url, CancellationToken ct = default)
-    {
-        return await GetAsync<System.Text.Json.JsonElement>(url, ct);
-    }
-
     // ??????????????????????????????????????????????
     //  Tracks
     // ??????????????????????????????????????????????
@@ -573,58 +559,88 @@ public sealed class TidalApiClient : IDisposable
         => GetPagesAsync(offset => GetFavoriteTracksAsync(PageSize, offset, ct: ct));
 
     /// <summary>
-    /// Ids of every favorited track. Uses the compact favorites/ids listing, and falls back
-    /// to paging through the full favorites if that endpoint is unavailable.
+    /// Ids of everything the user has favorited, from the compact favorites/ids listing. If
+    /// that endpoint is unavailable the tracks are paged through instead; the other kinds
+    /// then start out empty.
     /// </summary>
-    public async Task<HashSet<int>> GetFavoriteTrackIdsAsync(CancellationToken ct = default)
+    public async Task<FavoriteIdSets> GetFavoriteIdsAsync(CancellationToken ct = default)
     {
         EnsureUserId();
         try
         {
             var json = await GetAsync<JsonElement>($"users/{_userId}/favorites/ids?countryCode={_countryCode}", ct);
-            if (json.TryGetProperty("TRACK", out var tracks) && tracks.ValueKind == JsonValueKind.Array)
+            if (json.TryGetProperty("TRACK", out _))
             {
-                var ids = new HashSet<int>();
-                foreach (var el in tracks.EnumerateArray())
-                {
-                    if (el.ValueKind == JsonValueKind.Number && el.TryGetInt32(out var number))
-                        ids.Add(number);
-                    else if (el.ValueKind == JsonValueKind.String && int.TryParse(el.GetString(), out number))
-                        ids.Add(number);
-                }
-                return ids;
+                return new FavoriteIdSets(
+                    ReadIds(json, "TRACK", int.Parse), ReadIds(json, "ALBUM", int.Parse),
+                    ReadIds(json, "ARTIST", int.Parse), ReadIds(json, "PLAYLIST", s => s));
             }
         }
         catch (OperationCanceledException) { throw; }
         catch { /* fall back to paging below */ }
 
         var all = await GetAllPagesAsync(offset => GetFavoriteTracksAsync(PageSize, offset, ct: ct));
-        var result = new HashSet<int>();
+        var tracks = new HashSet<int>();
         foreach (var item in all)
-            if (item.Item is not null) result.Add(item.Item.Id);
-        return result;
+            if (item.Item is not null) tracks.Add(item.Item.Id);
+        return new FavoriteIdSets(tracks, [], [], []);
     }
 
-    public async Task AddFavoriteTrackAsync(int trackId, CancellationToken ct = default)
+    // The listing holds numbers or numeric strings depending on the kind.
+    private static HashSet<T> ReadIds<T>(JsonElement json, string kind, Func<string, T> parse)
+    {
+        var ids = new HashSet<T>();
+        if (!json.TryGetProperty(kind, out var array) || array.ValueKind != JsonValueKind.Array)
+            return ids;
+        foreach (var el in array.EnumerateArray())
+        {
+            var text = el.ValueKind == JsonValueKind.String ? el.GetString() : el.GetRawText();
+            if (string.IsNullOrEmpty(text)) continue;
+            try { ids.Add(parse(text)); } catch (FormatException) { }
+        }
+        return ids;
+    }
+
+    public Task AddFavoriteTrackAsync(int trackId, CancellationToken ct = default)
+        => AddFavoriteAsync("tracks", "trackIds", trackId.ToString(), ct);
+
+    public Task RemoveFavoriteTrackAsync(int trackId, CancellationToken ct = default)
+        => RemoveFavoriteAsync("tracks", trackId.ToString(), ct);
+
+    public Task AddFavoriteAlbumAsync(int albumId, CancellationToken ct = default)
+        => AddFavoriteAsync("albums", "albumIds", albumId.ToString(), ct);
+
+    public Task RemoveFavoriteAlbumAsync(int albumId, CancellationToken ct = default)
+        => RemoveFavoriteAsync("albums", albumId.ToString(), ct);
+
+    public Task AddFavoriteArtistAsync(int artistId, CancellationToken ct = default)
+        => AddFavoriteAsync("artists", "artistIds", artistId.ToString(), ct);
+
+    public Task RemoveFavoriteArtistAsync(int artistId, CancellationToken ct = default)
+        => RemoveFavoriteAsync("artists", artistId.ToString(), ct);
+
+    public Task AddFavoritePlaylistAsync(string uuid, CancellationToken ct = default)
+        => AddFavoriteAsync("playlists", "uuids", uuid, ct);
+
+    public Task RemoveFavoritePlaylistAsync(string uuid, CancellationToken ct = default)
+        => RemoveFavoriteAsync("playlists", uuid, ct);
+
+    private async Task AddFavoriteAsync(string kind, string idsField, string id, CancellationToken ct)
     {
         EnsureUserId();
         using var response = await SendAuthorizedAsync(() => new HttpRequestMessage(
-            HttpMethod.Post, $"users/{_userId}/favorites/tracks")
+            HttpMethod.Post, $"users/{_userId}/favorites/{kind}?countryCode={_countryCode}")
         {
-            Content = new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                ["trackIds"] = trackId.ToString(),
-                ["countryCode"] = _countryCode
-            })
+            Content = new FormUrlEncodedContent(new Dictionary<string, string> { [idsField] = id })
         }, ct);
         response.EnsureSuccessStatusCode();
     }
 
-    public async Task RemoveFavoriteTrackAsync(int trackId, CancellationToken ct = default)
+    private async Task RemoveFavoriteAsync(string kind, string id, CancellationToken ct)
     {
         EnsureUserId();
         using var response = await SendAuthorizedAsync(() => new HttpRequestMessage(
-            HttpMethod.Delete, $"users/{_userId}/favorites/tracks/{trackId}?countryCode={_countryCode}"), ct);
+            HttpMethod.Delete, $"users/{_userId}/favorites/{kind}/{Uri.EscapeDataString(id)}?countryCode={_countryCode}"), ct);
         response.EnsureSuccessStatusCode();
     }
 
@@ -633,16 +649,126 @@ public sealed class TidalApiClient : IDisposable
     {
         EnsureUserId();
         return await GetAsync<TidalPagedResult<TidalAlbumItem>>(
-            $"users/{_userId}/favorites/albums?limit={limit}&offset={offset}&countryCode={_countryCode}", ct);
+            $"users/{_userId}/favorites/albums?limit={limit}&offset={offset}&order=DATE&orderDirection=DESC&countryCode={_countryCode}", ct);
     }
 
-    public async Task<TidalPagedResult<TidalPlaylist>> GetFavoritePlaylistsAsync(
+    public async Task<TidalPagedResult<TidalArtistItem>> GetFavoriteArtistsAsync(
+        int limit = 50, int offset = 0, CancellationToken ct = default)
+    {
+        EnsureUserId();
+        return await GetAsync<TidalPagedResult<TidalArtistItem>>(
+            $"users/{_userId}/favorites/artists?limit={limit}&offset={offset}&order=DATE&orderDirection=DESC&countryCode={_countryCode}", ct);
+    }
+
+    /// <summary>Playlists the user created, the only ones that can be edited.</summary>
+    public async Task<TidalPagedResult<TidalPlaylist>> GetOwnPlaylistsAsync(
         int limit = 50, int offset = 0, CancellationToken ct = default)
     {
         EnsureUserId();
         return await GetAsync<TidalPagedResult<TidalPlaylist>>(
             $"users/{_userId}/playlists?limit={limit}&offset={offset}&countryCode={_countryCode}", ct);
     }
+
+    /// <summary>The library's playlists: the user's own and the ones they saved, together.</summary>
+    public async Task<TidalPagedResult<TidalPlaylistEntry>> GetLibraryPlaylistsAsync(
+        int limit = 50, int offset = 0, CancellationToken ct = default)
+    {
+        EnsureUserId();
+        return await GetAsync<TidalPagedResult<TidalPlaylistEntry>>(
+            $"users/{_userId}/playlistsAndFavoritePlaylists?limit={limit}&offset={offset}&order=DATE&orderDirection=DESC&countryCode={_countryCode}", ct);
+    }
+
+    public IAsyncEnumerable<List<TidalPlaylist>> GetOwnPlaylistPagesAsync(CancellationToken ct = default)
+        => GetPagesAsync(offset => GetOwnPlaylistsAsync(PageSize, offset, ct));
+
+    // ??????????????????????????????????????????????
+    //  Editing playlists
+    // ??????????????????????????????????????????????
+
+    public async Task<TidalPlaylist> CreatePlaylistAsync(string title, string description = "", CancellationToken ct = default)
+    {
+        EnsureUserId();
+        using var response = await SendAuthorizedAsync(() => new HttpRequestMessage(
+            HttpMethod.Post, $"users/{_userId}/playlists?countryCode={_countryCode}")
+        {
+            Content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["title"] = title,
+                ["description"] = description
+            })
+        }, ct);
+        response.EnsureSuccessStatusCode();
+
+        var json = await response.Content.ReadAsStringAsync(ct);
+        return JsonSerializer.Deserialize<TidalPlaylist>(json, JsonOptions)
+            ?? throw new InvalidOperationException("Failed to parse the created playlist.");
+    }
+
+    /// <summary>Adds tracks at the end. Tracks already in the playlist are skipped, not repeated.</summary>
+    public async Task AddTracksToPlaylistAsync(string uuid, IEnumerable<int> trackIds, CancellationToken ct = default)
+    {
+        var ids = string.Join(",", trackIds);
+        await EditPlaylistAsync(uuid, etag =>
+        {
+            var request = new HttpRequestMessage(HttpMethod.Post, $"playlists/{uuid}/items?countryCode={_countryCode}")
+            {
+                Content = new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                    ["trackIds"] = ids,
+                    ["onDupes"] = "SKIP",
+                    ["onArtifactNotFound"] = "FAIL"
+                })
+            };
+            return WithETag(request, etag);
+        }, ct);
+    }
+
+    /// <summary>Removes the item at <paramref name="index"/> (0-based position in the playlist).</summary>
+    public Task RemovePlaylistItemAsync(string uuid, int index, CancellationToken ct = default)
+        => EditPlaylistAsync(uuid, etag => WithETag(
+            new HttpRequestMessage(HttpMethod.Delete, $"playlists/{uuid}/items/{index}?countryCode={_countryCode}"), etag), ct);
+
+    // TIDAL applies playlist edits only to the version they were made against: each one has to
+    // carry that version's ETag in If-None-Match, so it is read fresh right before the edit.
+    private async Task EditPlaylistAsync(string uuid, Func<string?, HttpRequestMessage> createRequest, CancellationToken ct)
+    {
+        string? etag;
+        using (var current = await SendAuthorizedAsync(() => new HttpRequestMessage(
+            HttpMethod.Get, $"playlists/{uuid}?countryCode={_countryCode}"), ct))
+        {
+            current.EnsureSuccessStatusCode();
+            etag = current.Headers.ETag?.Tag;
+        }
+
+        using var response = await SendAuthorizedAsync(() => createRequest(etag), ct);
+        response.EnsureSuccessStatusCode();
+    }
+
+    private static HttpRequestMessage WithETag(HttpRequestMessage request, string? etag)
+    {
+        if (etag is not null)
+            request.Headers.TryAddWithoutValidation("If-None-Match", etag);
+        return request;
+    }
+
+    // ??????????????????????????????????????????????
+    //  Credits and pages
+    // ??????????????????????????????????????????????
+
+    public Task<List<TidalCredit>> GetTrackCreditsAsync(int trackId, CancellationToken ct = default)
+        => GetAsync<List<TidalCredit>>($"tracks/{trackId}/credits?countryCode={_countryCode}", ct);
+
+    /// <summary>
+    /// A TIDAL page as raw JSON: pages/explore, a genre such as pages/genre_pop, or the
+    /// single-module page a "show more" link points to.
+    /// </summary>
+    public Task<JsonElement> GetPageAsync(string apiPath, CancellationToken ct = default)
+        => GetAsync<JsonElement>($"{apiPath}{(apiPath.Contains('?') ? '&' : '?')}countryCode={_countryCode}&deviceType=BROWSER", ct);
+
+    /// <summary>More items of a page module, from its pagedList.dataApiPath.</summary>
+    public Task<JsonElement> GetPageDataAsync(string dataApiPath, int offset, int limit = 50, CancellationToken ct = default)
+        => GetAsync<JsonElement>(
+            $"{dataApiPath}{(dataApiPath.Contains('?') ? '&' : '?')}offset={offset}&limit={limit}&countryCode={_countryCode}&deviceType=BROWSER", ct);
 
     // ??????????????????????????????????????????????
     //  Image helpers

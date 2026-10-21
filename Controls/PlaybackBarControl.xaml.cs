@@ -93,8 +93,10 @@ namespace TidalUi3.Controls
 
         private void UpdateSyncStatus(bool connected, SyncService? sync)
         {
-            var isVisible = SettingsService.SyncEnabled && connected;
-            DevicesButton.Visibility = isVisible ? Visibility.Visible : Visibility.Collapsed;
+            // The button stays for the audio output; the sync part shows only with sync on.
+            var syncVisibility = SettingsService.SyncEnabled ? Visibility.Visible : Visibility.Collapsed;
+            SyncDevicesPanel.Visibility = syncVisibility;
+            SyncStatusDot.Visibility = syncVisibility;
 
             SyncStatusDot.Fill = connected
                 ? new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(255, 0, 200, 83))
@@ -139,6 +141,24 @@ namespace TidalUi3.Controls
                     DevicesFlyout.Hide();
                 }
             }
+        }
+
+        private bool _fillingOutputs;
+
+        // Devices come and go; list them as they are each time the flyout opens.
+        private async void DevicesFlyout_Opening(object sender, object e)
+        {
+            var (choices, current) = await _playback.GetOutputChoicesAsync();
+            _fillingOutputs = true;
+            OutputDevicesList.ItemsSource = choices;
+            OutputDevicesList.SelectedIndex = current;
+            _fillingOutputs = false;
+        }
+
+        private async void OutputDevicesList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_fillingOutputs || OutputDevicesList.SelectedItem is not AudioOutputDevice device) return;
+            await _playback.SetOutputDeviceAsync(device.Id);
         }
 
         private void SyncSettingsButton_Click(object sender, RoutedEventArgs e)
@@ -331,15 +351,7 @@ namespace TidalUi3.Controls
         // The button icons follow through ModesChanged.
         private void TransportControls_ShuffleClick(object sender, RoutedEventArgs e) => _queue.SetShuffle(!_queue.Shuffle);
 
-        private void TransportControls_RepeatClick(object sender, RoutedEventArgs e)
-        {
-            _queue.Repeat = _queue.Repeat switch
-            {
-                global::TidalUi3.Services.RepeatMode.Off => global::TidalUi3.Services.RepeatMode.All,
-                global::TidalUi3.Services.RepeatMode.All => global::TidalUi3.Services.RepeatMode.One,
-                _ => global::TidalUi3.Services.RepeatMode.Off
-            };
-        }
+        private void TransportControls_RepeatClick(object sender, RoutedEventArgs e) => _queue.CycleRepeat();
 
         private void ProgressSlider_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
@@ -428,6 +440,22 @@ namespace TidalUi3.Controls
             var track = _queue.CurrentTrack;
             if (track != null && track.AlbumId != 0)
                 App.MainWindow?.NavigateTo(typeof(Pages.PlaylistDetailPage), track.AlbumId);
+        }
+
+        // The two "go to" items are fixed; the rest is rebuilt each time, since the
+        // playlists offered are the user's as they are now.
+        private void NowPlayingMenu_Opening(object sender, object e)
+        {
+            var menu = (MenuFlyout)sender;
+            while (menu.Items.Count > 2)
+                menu.Items.RemoveAt(menu.Items.Count - 1);
+
+            if (_queue.CurrentTrack is not { Id: > 0 } track) return;
+            menu.Items.Add(new MenuFlyoutSeparator());
+            menu.Items.Add(PlaylistActions.CreateAddToPlaylistMenu([track]));
+            var credits = new MenuFlyoutItem { Text = Loc.Get("Menu_Credits"), Icon = new FontIcon { Glyph = Glyphs.Credits } };
+            credits.Click += (_, _) => _ = CreditsDialog.ShowAsync(track, (type, parameter) => App.MainWindow?.NavigateTo(type, parameter));
+            menu.Items.Add(credits);
         }
     }
 }

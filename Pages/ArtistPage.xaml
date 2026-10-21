@@ -77,6 +77,11 @@
                                 Glyph="&#xE8B1;"
                                 Click="ShuffleButton_Click"
                             />
+                            <controls:IconButtonControl
+                                x:Name="FollowButton"
+                                Glyph="&#xEB51;"
+                                Click="FollowButton_Click"
+                            />
                         </StackPanel>
                     </StackPanel>
                 </Grid>

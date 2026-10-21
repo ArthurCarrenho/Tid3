@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="TidalUi3.Pages.ItemsGridPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:controls="using:TidalUi3.Controls"
+    mc:Ignorable="d"
+>
+
+    <!-- A grid of albums, playlists, mixes or artists that loads page by page as it scrolls -->
+    <Grid>
+        <GridView
+            x:Name="ItemsGrid"
+            Padding="36,24,52,120"
+            SelectionMode="None"
+            IsItemClickEnabled="True"
+            ItemClick="ItemsGrid_ItemClick"
+            ItemTemplateSelector="{StaticResource SectionItemTemplateSelector}"
+        >
+            <GridView.Header>
+                <StackPanel Spacing="16" Margin="0,0,0,16">
+                    <controls:BackButtonControl ShowLabel="True" />
+                    <TextBlock x:Name="TitleText" Style="{StaticResource TitleTextBlockStyle}" TextWrapping="Wrap" />
+                </StackPanel>
+            </GridView.Header>
+            <GridView.Footer>
+                <StackPanel Margin="0,16" HorizontalAlignment="Center" Spacing="8">
+                    <ProgressRing x:Name="LoadingRing" IsActive="True" />
+                    <TextBlock
+                        x:Name="StatusText"
+                        Visibility="Collapsed"
+                        Style="{StaticResource BodyTextBlockStyle}"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    />
+                </StackPanel>
+            </GridView.Footer>
+        </GridView>
+    </Grid>
+</Page>

@@ -68,17 +68,22 @@
 **Playback**
 - Hi-Res Lossless (MAX), Lossless (HIGH), and Dolby Atmos quality
 - Gapless playback
+- Pick the output device (speakers, headphones) from the playback bar or Settings
 - SMTC integration — media keys, taskbar thumbnail controls, lock screen
+- Keyboard shortcuts — Space to play/pause, Ctrl+arrows for tracks and volume, Ctrl+S/R/L/F, Alt+arrows and the mouse side buttons to go back/forward (full list in Settings)
 
 **Browsing**
 - Personalized home feed
-- Search across tracks, albums, artists, and playlists
+- Explore — genres, moods & activities, decades, new releases, with "See all" on every row
+- Search across tracks, albums, artists, and playlists, with "See all" per type
 - Artist pages with biography, top tracks, and full discography
 - Album, playlist, and mix detail views
+- Track credits
 
 **Library**
-- Liked songs, saved albums, and playlists
-- Like/unlike tracks from the playback bar
+- Liked songs, saved albums, followed artists, and your own and saved playlists
+- Like tracks, save albums and playlists, follow artists
+- Create playlists, add tracks to them and remove tracks from them
 
 **Queue & Lyrics**
 - Queue panel with shuffle and repeat modes

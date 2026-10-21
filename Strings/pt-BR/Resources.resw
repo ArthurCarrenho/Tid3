@@ -125,8 +125,8 @@
   <!-- Playback Bar -->
   <data name="PlaybackBar_Context_GoToArtist.Text" xml:space="preserve"><value>Ir para Artista</value></data>
   <data name="PlaybackBar_Context_GoToAlbum.Text" xml:space="preserve"><value>Ir para Álbum</value></data>
-  <data name="PlaybackBar_Devices.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Conectar a um dispositivo</value></data>
-  <data name="PlaybackBar_Devices.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Conectar a um dispositivo</value></data>
+  <data name="PlaybackBar_Devices.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Dispositivos e saída de áudio</value></data>
+  <data name="PlaybackBar_Devices.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Dispositivos e saída de áudio</value></data>
   <data name="PlaybackBar_Devices_Header.Text" xml:space="preserve"><value>Conectar a um dispositivo</value></data>
   <data name="PlaybackBar_Devices_None.Visibility" xml:space="preserve"><value>Visible</value></data>
   <data name="PlaybackBar_Devices_None.Text" xml:space="preserve"><value>Nenhum outro dispositivo ativo encontrado.</value></data>
@@ -139,9 +139,9 @@
 
   <!-- Search -->
   <data name="SearchBox_Placeholder.PlaceholderText" xml:space="preserve"><value>O que você quer ouvir?</value></data>
-  <data name="SearchHeader_Artists.Text" xml:space="preserve"><value>Artistas</value></data>
-  <data name="SearchHeader_Albums.Text" xml:space="preserve"><value>Álbuns</value></data>
-  <data name="SearchHeader_Songs.Text" xml:space="preserve"><value>Músicas</value></data>
+  <data name="SearchHeader_Artists" xml:space="preserve"><value>Artistas</value></data>
+  <data name="SearchHeader_Albums" xml:space="preserve"><value>Álbuns</value></data>
+  <data name="SearchHeader_Songs" xml:space="preserve"><value>Músicas</value></data>
   <data name="SearchHeader_BrowseAll.Text" xml:space="preserve"><value>Navegar por tudo</value></data>
   <data name="SearchResults_Title" xml:space="preserve"><value>Resultados para "{0}"</value></data>
   <data name="SearchResults_None" xml:space="preserve"><value>Nenhum resultado para "{0}"</value></data>
@@ -161,9 +161,6 @@
   <data name="ArtistBio_Title.Text" xml:space="preserve"><value>Sobre</value></data>
   <data name="ArtistBio_ShowMore.Content" xml:space="preserve"><value>Mostrar mais</value></data>
   <data name="ArtistTopTracks_Title.Text" xml:space="preserve"><value>Mais tocadas</value></data>
-  <data name="ArtistAlbums_Title" xml:space="preserve"><value>Álbuns</value></data>
-  <data name="ArtistSingles_Title" xml:space="preserve"><value>Singles e EPs</value></data>
-  <data name="ArtistAppearsOn_Title" xml:space="preserve"><value>Aparece em</value></data>
   <data name="Artist_LoadError" xml:space="preserve"><value>Falha ao carregar artista</value></data>
   <data name="Artist_AlbumType_Album" xml:space="preserve"><value>Álbum</value></data>
   <data name="Artist_AlbumType_Single" xml:space="preserve"><value>Single</value></data>
@@ -188,7 +185,6 @@
   <!-- LibraryPage -->
   <data name="LibraryHeader.Text" xml:space="preserve"><value>Sua Biblioteca</value></data>
   <data name="LibraryPlaylists_Title.Text" xml:space="preserve"><value>Suas Playlists</value></data>
-  <data name="LibraryPlaylists_TrackCount" xml:space="preserve"><value> faixas</value></data>
   <data name="LibraryAlbums_Title" xml:space="preserve"><value>Álbuns Salvos</value></data>
   <data name="LibraryLikedSongs_Title.Text" xml:space="preserve"><value>Músicas Curtidas</value></data>
   <data name="Library_UnknownArtist" xml:space="preserve"><value>Artista Desconhecido</value></data>
@@ -284,14 +280,10 @@
   <data name="BackButton_Label" xml:space="preserve"><value>Voltar</value></data>
   <data name="Header_Forward.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Avançar</value></data>
   <data name="Header_Forward.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Avançar</value></data>
-  <data name="Transport_Shuffle.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Ordem aleatória</value></data>
-  <data name="Transport_Shuffle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Ordem aleatória</value></data>
   <data name="Transport_Previous.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Anterior</value></data>
   <data name="Transport_Previous.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Anterior</value></data>
   <data name="Transport_Next.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Próxima</value></data>
   <data name="Transport_Next.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Próxima</value></data>
-  <data name="Transport_Repeat.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Repetir</value></data>
-  <data name="Transport_Repeat.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Repetir</value></data>
   <data name="Transport_Play" xml:space="preserve"><value>Tocar</value></data>
   <data name="Transport_Pause" xml:space="preserve"><value>Pausar</value></data>
   <data name="PlaybackBar_Progress.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Posição da faixa</value></data>
@@ -314,4 +306,65 @@
   <data name="Tray_Quit" xml:space="preserve"><value>Sair</value></data>
   <data name="Thumb_Previous" xml:space="preserve"><value>Anterior</value></data>
   <data name="Thumb_Next" xml:space="preserve"><value>Próxima</value></data>
+  <data name="NavExplore.Content" xml:space="preserve"><value>Explorar</value></data>
+  <data name="ExploreHeader.Text" xml:space="preserve"><value>Explorar</value></data>
+  <data name="BrowseLoadError.Title" xml:space="preserve"><value>Não foi possível carregar esta página</value></data>
+  <data name="BrowseLoadError.Description" xml:space="preserve"><value>Verifique sua conexão e tente de novo.</value></data>
+  <data name="Section_ShowAll.Content" xml:space="preserve"><value>Ver tudo</value></data>
+  <data name="Section_ShowAllText" xml:space="preserve"><value>Ver tudo</value></data>
+  <data name="ItemsGrid_Empty" xml:space="preserve"><value>Nada aqui ainda.</value></data>
+  <data name="ItemsGrid_LoadFailed" xml:space="preserve"><value>Não foi possível carregar mais. Verifique sua conexão.</value></data>
+  <data name="SearchHeader_Playlists" xml:space="preserve"><value>Playlists</value></data>
+  <data name="SearchMore_Title" xml:space="preserve"><value>{0} para "{1}"</value></data>
+  <data name="LibraryArtists_Title" xml:space="preserve"><value>Artistas Seguidos</value></data>
+  <data name="Library_Save" xml:space="preserve"><value>Salvar</value></data>
+  <data name="Library_Saved" xml:space="preserve"><value>Salvo</value></data>
+  <data name="Library_SaveFailed" xml:space="preserve"><value>Não foi possível atualizar sua biblioteca. Tente de novo.</value></data>
+  <data name="Artist_Follow" xml:space="preserve"><value>Seguir</value></data>
+  <data name="Artist_Following" xml:space="preserve"><value>Seguindo</value></data>
+  <data name="Menu_OpenPlaylist" xml:space="preserve"><value>Abrir playlist</value></data>
+  <data name="Menu_SaveToLibrary" xml:space="preserve"><value>Salvar na biblioteca</value></data>
+  <data name="Menu_RemoveFromLibrary" xml:space="preserve"><value>Remover da biblioteca</value></data>
+  <data name="Menu_Follow" xml:space="preserve"><value>Seguir</value></data>
+  <data name="Menu_Unfollow" xml:space="preserve"><value>Deixar de seguir</value></data>
+  <data name="Menu_AddToPlaylist" xml:space="preserve"><value>Adicionar à playlist</value></data>
+  <data name="Menu_NewPlaylist" xml:space="preserve"><value>Nova playlist...</value></data>
+  <data name="Playlist_Added" xml:space="preserve"><value>Adicionado a {0}</value></data>
+  <data name="Playlist_AddFailed" xml:space="preserve"><value>Não foi possível adicionar a {0}. Tente de novo.</value></data>
+  <data name="Playlist_NewTitle" xml:space="preserve"><value>Nova playlist</value></data>
+  <data name="Playlist_NamePlaceholder" xml:space="preserve"><value>Nome da playlist</value></data>
+  <data name="Playlist_Create" xml:space="preserve"><value>Criar</value></data>
+  <data name="Playlist_CreateFailed" xml:space="preserve"><value>Não foi possível criar a playlist. Tente de novo.</value></data>
+  <data name="Playlist_RemoveTrack" xml:space="preserve"><value>Remover desta playlist</value></data>
+  <data name="Playlist_RemoveFailed" xml:space="preserve"><value>Não foi possível remover a faixa. Tente de novo.</value></data>
+  <data name="Common_Cancel" xml:space="preserve"><value>Cancelar</value></data>
+  <data name="Menu_Credits" xml:space="preserve"><value>Créditos</value></data>
+  <data name="Credits_None" xml:space="preserve"><value>O TIDAL não tem créditos para esta faixa.</value></data>
+  <data name="Credits_LoadFailed" xml:space="preserve"><value>Não foi possível carregar os créditos.</value></data>
+  <data name="AudioOutput_Default" xml:space="preserve"><value>Padrão do sistema</value></data>
+  <data name="PlaybackBar_AudioOutput_Header.Text" xml:space="preserve"><value>Saída de áudio</value></data>
+  <data name="PlaybackBar_AudioOutput_List.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Saída de áudio</value></data>
+  <data name="SettingsPlayback_OutputDevice.Title" xml:space="preserve"><value>Dispositivo de saída</value></data>
+  <data name="SettingsPlayback_OutputDevice.Description" xml:space="preserve"><value>Alto-falantes ou fones para tocar</value></data>
+  <data name="ArtistAlbums.Title" xml:space="preserve"><value>Álbuns</value></data>
+  <data name="ArtistSingles.Title" xml:space="preserve"><value>Singles e EPs</value></data>
+  <data name="ArtistAppearsOn.Title" xml:space="preserve"><value>Aparece em</value></data>
+  <data name="SettingsGeneral_Shortcuts.Text" xml:space="preserve"><value>Atalhos de teclado</value></data>
+  <data name="SettingsGeneral_Shortcuts_Desc.Text" xml:space="preserve"><value>Funcionam em todo o app, menos enquanto você digita</value></data>
+  <data name="Shortcut_SpaceKey" xml:space="preserve"><value>Espaço</value></data>
+  <data name="Shortcut_MouseKeys" xml:space="preserve"><value>Voltar / avançar do mouse</value></data>
+  <data name="Shortcut_PlayPause" xml:space="preserve"><value>Tocar ou pausar</value></data>
+  <data name="Shortcut_Next" xml:space="preserve"><value>Próxima faixa</value></data>
+  <data name="Shortcut_Previous" xml:space="preserve"><value>Faixa anterior, ou recomeçar a atual</value></data>
+  <data name="Shortcut_Volume" xml:space="preserve"><value>Aumentar / diminuir o volume</value></data>
+  <data name="Shortcut_Shuffle" xml:space="preserve"><value>Ligar ou desligar o aleatório</value></data>
+  <data name="Shortcut_Repeat" xml:space="preserve"><value>Repetir: desligado, todas, uma</value></data>
+  <data name="Shortcut_Like" xml:space="preserve"><value>Curtir a faixa atual</value></data>
+  <data name="Shortcut_Search" xml:space="preserve"><value>Buscar</value></data>
+  <data name="Shortcut_BackForward" xml:space="preserve"><value>Voltar / avançar</value></data>
+  <data name="Transport_ShuffleOff" xml:space="preserve"><value>Ordem aleatória: desligada</value></data>
+  <data name="Transport_ShuffleOn" xml:space="preserve"><value>Ordem aleatória: ligada</value></data>
+  <data name="Transport_RepeatOff" xml:space="preserve"><value>Repetir: desligado</value></data>
+  <data name="Transport_RepeatAll" xml:space="preserve"><value>Repetir: todas</value></data>
+  <data name="Transport_RepeatOne" xml:space="preserve"><value>Repetir: uma</value></data>
 </root>

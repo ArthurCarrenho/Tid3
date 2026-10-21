@@ -1,4 +1,5 @@
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 
 namespace TidalUi3.Controls;
@@ -64,7 +65,10 @@ public sealed partial class SettingsCardControl : UserControl
     private static void OnTitleChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is SettingsCardControl c && e.NewValue is string title)
+        {
             c.TitleText.Text = title;
+            c.NameActionContent();
+        }
     }
 
     private static void OnDescriptionChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -79,7 +83,23 @@ public sealed partial class SettingsCardControl : UserControl
     private static void OnActionContentChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is SettingsCardControl c && e.NewValue is UIElement content)
+        {
             c.ActionPresenter.Content = content;
+            c.NameActionContent();
+        }
+    }
+
+    private string? _appliedName;
+
+    // The switch or drop-down at the right has no label of its own, so screen readers would
+    // announce it as "on" or by its current choice. Name it after the card unless it has a name.
+    private void NameActionContent()
+    {
+        if (ActionContent is not FrameworkElement content || string.IsNullOrEmpty(Title)) return;
+        var current = AutomationProperties.GetName(content);
+        if (!string.IsNullOrEmpty(current) && current != _appliedName) return;
+        AutomationProperties.SetName(content, Title);
+        _appliedName = Title;
     }
 
     private static void OnIsDevPreviewChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)

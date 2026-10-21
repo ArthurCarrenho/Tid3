@@ -38,10 +38,25 @@
                         Spacing="12"
                         Visibility="Collapsed"
                     >
-                        <TextBlock
-                            x:Uid="LibraryPlaylists_Title"
-                            Style="{StaticResource SubtitleTextBlockStyle}"
-                        />
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock
+                                x:Name="PlaylistsTitle"
+                                x:Uid="LibraryPlaylists_Title"
+                                Style="{StaticResource SubtitleTextBlockStyle}"
+                                VerticalAlignment="Center"
+                            />
+                            <HyperlinkButton
+                                x:Name="PlaylistsShowAll"
+                                x:Uid="Section_ShowAll"
+                                Grid.Column="1"
+                                Visibility="Collapsed"
+                                Click="PlaylistsShowAll_Click"
+                            />
+                        </Grid>
                         <ScrollViewer
                             HorizontalScrollBarVisibility="Auto"
                             VerticalScrollBarVisibility="Disabled"
@@ -95,14 +110,10 @@
                                                     MaxLines="1"
                                                 />
                                                 <TextBlock
+                                                    Text="{Binding TrackCountText}"
                                                     Style="{StaticResource CaptionTextBlockStyle}"
                                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                >
-                                                    <Run
-                                                        Text="{Binding TrackCount}"
-                                                    />
-                                                    <Run x:Uid="LibraryPlaylists_TrackCount" />
-                                                </TextBlock>
+                                                />
                                                 <TextBlock
                                                     Text="{Binding Duration}"
                                                     Style="{StaticResource CaptionTextBlockStyle}"
@@ -119,22 +130,20 @@
                     <!-- Saved Albums -->
                     <controls:CarouselSectionControl
                         x:Name="AlbumsCarousel"
-                        x:Uid="LibraryAlbums"
                         Visibility="Collapsed"
-                        ItemClick="AlbumItem_Click"
-                    >
-                        <controls:CarouselSectionControl.ItemTemplate>
-                            <DataTemplate>
-                                <controls:MediaCardControl
-                                    CardWidth="180"
-                                    TitleText="{Binding Title}"
-                                    SubtitleText="{Binding Artist}"
-                                    ImageUrl="{Binding CoverUrl}"
-                                    FallbackGlyph="&#xE93C;"
-                                />
-                            </DataTemplate>
-                        </controls:CarouselSectionControl.ItemTemplate>
-                    </controls:CarouselSectionControl>
+                        ItemTemplateSelector="{StaticResource SectionItemTemplateSelector}"
+                        ItemClick="CardItem_Click"
+                        ShowAllClick="AlbumsShowAll_Click"
+                    />
+
+                    <!-- Followed Artists -->
+                    <controls:CarouselSectionControl
+                        x:Name="ArtistsCarousel"
+                        Visibility="Collapsed"
+                        ItemTemplateSelector="{StaticResource SectionItemTemplateSelector}"
+                        ItemClick="CardItem_Click"
+                        ShowAllClick="ArtistsShowAll_Click"
+                    />
 
                     <!-- Liked Songs (the tracks themselves are the list items) -->
                     <StackPanel

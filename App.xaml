@@ -42,6 +42,34 @@
                 <Setter Property="CornerRadius" Value="16" />
             </Style>
 
+            <!-- Cards of page sections, carousels and "see all" grids (HomeSectionItem) -->
+            <DataTemplate x:Key="SectionCardTemplate">
+                <controls:MediaCardControl
+                    CardWidth="180"
+                    TitleText="{Binding Title}"
+                    SubtitleText="{Binding Subtitle}"
+                    ImageUrl="{Binding CoverUrl}"
+                    IsExplicit="{Binding IsExplicit}"
+                    FallbackGlyph="&#xE8D6;"
+                />
+            </DataTemplate>
+            <DataTemplate x:Key="SectionArtistTemplate">
+                <controls:ArtistCardControl
+                    ArtistName="{Binding Title}"
+                    ArtistImageUrl="{Binding CoverUrl}"
+                />
+            </DataTemplate>
+            <controls:SectionItemTemplateSelector
+                x:Key="SectionItemTemplateSelector"
+                CardTemplate="{StaticResource SectionCardTemplate}"
+                ArtistTemplate="{StaticResource SectionArtistTemplate}"
+            />
+
+            <!-- Track rows of the short lists inside pages (Explore, genres) -->
+            <DataTemplate x:Key="TrackRowTemplate">
+                <controls:TrackListItemControl ShowHeart="False" AlbumColumnWidth="0.6*" />
+            </DataTemplate>
+
             <DataTemplate x:Key="QueueItemTemplate">
                 <Grid Padding="4,6" ColumnSpacing="10">
                     <Grid.ColumnDefinitions>

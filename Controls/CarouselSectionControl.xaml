@@ -10,7 +10,16 @@
     mc:Ignorable="d">
 
     <StackPanel Spacing="12">
-        <TextBlock x:Name="TitleBlock" Style="{StaticResource SubtitleTextBlockStyle}" />
+        <Grid ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock x:Name="TitleBlock" Style="{StaticResource SubtitleTextBlockStyle}"
+                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            <HyperlinkButton x:Name="ShowAllButton" x:Uid="Section_ShowAll" Grid.Column="1"
+                             Content="See all" Visibility="Collapsed" Click="ShowAllButton_Click" />
+        </Grid>
         <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
                       HorizontalScrollMode="Enabled" VerticalScrollMode="Disabled">
             <GridView x:Name="ItemsGrid" SelectionMode="None" IsItemClickEnabled="True"

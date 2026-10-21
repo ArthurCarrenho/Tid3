@@ -41,6 +41,9 @@ public static class Glyphs
     public const string Remove = "\uE711";
     public const string Edit = "\uE70F";
     public const string Delete = "\uE74D";
+    public const string AddToPlaylist = "\uECC8";
+    public const string Credits = "\uE716";
+    public const string Speakers = "\uE7F5";
 
     // UI Elements
     public const string Volume = "\uE767";

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="TidalUi3.Pages.BrowsePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:controls="using:TidalUi3.Controls"
+    mc:Ignorable="d"
+>
+
+    <!-- A TIDAL page opened from a link: a genre, a mood, a decade, "New", "HiRes"… -->
+    <Grid>
+        <controls:LoadingOverlayControl x:Name="PageLoading" />
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,16,0">
+            <StackPanel Spacing="32" Padding="36,24,36,120">
+
+                <StackPanel Spacing="16">
+                    <controls:BackButtonControl ShowLabel="True" />
+                    <TextBlock x:Name="TitleText" Style="{StaticResource TitleLargeTextBlockStyle}" />
+                </StackPanel>
+
+                <StackPanel x:Name="SectionsHost" Spacing="32" />
+
+                <StackPanel
+                    x:Name="LoadErrorPanel"
+                    Visibility="Collapsed"
+                    Spacing="16"
+                    Margin="0,48,0,0"
+                    HorizontalAlignment="Center"
+                >
+                    <controls:EmptyStateControl x:Uid="BrowseLoadError" IconGlyph="&#xE7BA;" />
+                    <Button x:Uid="HomeLoadError_Retry" HorizontalAlignment="Center" Click="RetryButton_Click" />
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>

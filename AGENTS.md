@@ -6,12 +6,14 @@ TidalUi3 is a **Windows desktop music streaming client** for TIDAL, built with *
 
 ### Key Features
 - Device code OAuth authentication with TIDAL
-- Browse personalized "For You" recommendations
+- Browse personalized "For You" recommendations and the Explore pages (genres, moods, decades)
 - Search across tracks, albums, artists, and playlists
 - Playback with Hi-Res Lossless (MAX) quality support
 - Queue management with shuffle and repeat modes
 - Real-time synced lyrics display
-- Library management (favorite tracks, albums, playlists)
+- Library management (liked tracks, saved albums and playlists, followed artists)
+- Playlist editing (create, add tracks, remove tracks) and track credits
+- Output device selection and keyboard shortcuts (listed in Settings)
 - Artist pages with biography, discography, and top tracks
 - Session persistence and resume functionality
 
@@ -75,7 +77,10 @@ TidalUi3/
 │   └── SearchSuggestion.cs
 │
 ├── Pages/                # Main application pages
-│   ├── HomePage.xaml         # Personalized recommendations
+│   ├── HomePage.xaml         # Personalized recommendations (pages/for_you)
+│   ├── ExplorePage.xaml      # Genres, moods, decades (pages/explore)
+│   ├── BrowsePage.xaml       # Any TIDAL page by apiPath (a genre, a mood)
+│   ├── ItemsGridPage.xaml    # "See all" grid of cards, loaded page by page
 │   ├── LibraryPage.xaml      # User's library
 │   ├── PlaylistDetailPage.xaml # Album/playlist/mix details
 │   ├── ArtistPage.xaml       # Artist profile
@@ -88,6 +93,8 @@ TidalUi3/
     ├── TidalApiModels.cs       # API response models
     ├── PlaybackService.cs      # Media playback control
     ├── QueueService.cs         # Playback queue management
+    ├── FavoritesService.cs     # Liked/saved/followed state, toggled optimistically
+    ├── PlaylistService.cs      # The user's own playlists and editing them
     ├── ImageCacheService.cs    # Async image caching
     ├── TokenStorageService.cs  # Secure token persistence
     ├── SessionStorageService.cs # Playback session persistence
@@ -216,16 +223,20 @@ Central HTTP client for TIDAL API (`api.tidalhifi.com/v1/`).
 - `RefreshAccessTokenAsync()` - Token refresh
 
 **Key Methods**:
-- `GetForYouPageAsync()` - Personalized home content
+- `GetPageAsync(apiPath)` / `GetPageDataAsync()` - TIDAL pages (For You, Explore, genres) and their "show more" lists; parsed by `Helpers/PageModules.cs`, rendered by `Helpers/PageSectionsBuilder.cs`
 - `SearchAsync()` / `SearchTopHitsAsync()` - Search
 - `GetPlaybackInfoAsync()` - Stream URLs (supports HI_RES_LOSSLESS)
 - `GetTrackLyricsAsync()` - TIDAL's own lyrics (refused for most client ids; `LyricsService` uses it as a last resort)
-- `GetFavoritePlaylistsAsync()` - User's playlists
+- `GetLibraryPlaylistsAsync()` / `GetOwnPlaylistsAsync()` - The library's playlists (own and saved) / only the user's own
+- `GetFavoriteIdsAsync()`, `Add/RemoveFavorite*Async()` - Liked, saved and followed items
+- `CreatePlaylistAsync()`, `AddTracksToPlaylistAsync()`, `RemovePlaylistItemAsync()` - Playlist editing (sends the playlist's ETag as `If-None-Match`)
+- `GetTrackCreditsAsync()` - Track credits
 
 ### PlaybackService
 Wraps `Windows.Media.Playback.MediaPlayer`.
 
 - Supports DASH manifests for Hi-Res FLAC
+- Output device: `SetOutputDeviceAsync()` sets `MediaPlayer.AudioDevice` and saves it; a `DeviceWatcher` plays through the system default while the chosen device is gone and switches back when it returns
 - SMTC integration (Windows media overlay)
 - Position tracking timer (250ms intervals)
 - Quality detection and display
@@ -301,8 +312,11 @@ DASH manifests (XML) are handled separately from JSON manifests for Hi-Res conte
 | Albums | `/albums/{id}`, `/albums/{id}/tracks` |
 | Artists | `/artists/{id}`, `/artists/{id}/toptracks`, `/artists/{id}/albums`, `/artists/{id}/bio` |
 | Playlists | `/playlists/{uuid}`, `/playlists/{uuid}/items` |
-| User | `/users/{id}/favorites/tracks`, `/users/{id}/playlists` |
+| User | `/users/{id}/favorites/{tracks,albums,artists,playlists}`, `/users/{id}/favorites/ids`, `/users/{id}/playlists`, `/users/{id}/playlistsAndFavoritePlaylists` |
+| Playlist editing | `POST /users/{id}/playlists`, `POST /playlists/{uuid}/items`, `DELETE /playlists/{uuid}/items/{index}` |
+| Credits | `/tracks/{id}/credits` |
 | For You | `/pages/for_you` |
+| Explore | `/pages/explore`, `/pages/{genre}`, `/pages/single-module-page/...`, `/pages/data/{id}` |
 | Mixes | `/pages/mix` |
 | Radio | `/tracks/{id}/radio` |
 | Lyrics | `LyricsService`: LRCLIB `lrclib.net/api/get`, then `/api/search` (by duration), then `/tracks/{id}/lyrics` |
@@ -336,7 +350,8 @@ DASH manifests (XML) are handled separately from JSON manifests for Hi-Res conte
 
 `tests/TidalUi3.Tests` (xUnit) covers the logic that doesn't need the UI: the queue
 (`QueueService`), the queue panel's row diff (`QueueRows`), playing lists that load page by
-page (`LoadingTrackListPlayer`) and LRC parsing. The app is a packaged WinUI executable and
+page (`LoadingTrackListPlayer`), LRC parsing, TIDAL page parsing (`PageModules`) and the
+"see all" loaders (`PagedLoaders`). The app is a packaged WinUI executable and
 can't be referenced, so the test project compiles those source files in directly; add a file
 there when a new class is worth testing. The app project excludes `tests\**` from its items.
 

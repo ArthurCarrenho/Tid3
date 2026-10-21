@@ -69,6 +69,15 @@ public sealed partial class MainWindow : Window
         ContentFrame.AddHandler(UIElement.PointerPressedEvent,
             new PointerEventHandler((_, _) => PageHeader.CloseSuggestions()), true);
 
+        // The sidebar lists the library's playlists; keep it in step when one is created or saved.
+        PlaylistService.Changed += LoadSidebarPlaylists;
+        FavoritesService.LibraryPlaylistsChanged += LoadSidebarPlaylists;
+
+        // Keyboard shortcuts anywhere in the main app, and the mouse's back/forward buttons.
+        MainAppPanel.PreviewKeyDown += OnShortcutKeyDown;
+        MainAppPanel.AddHandler(UIElement.PointerPressedEvent,
+            new PointerEventHandler(OnNavigationPointerPressed), true);
+
         _queue.CurrentTrackChanged += OnCurrentTrackChanged;
         _queue.Queue.CollectionChanged += (_, _) => _sessionDirty = true;
         _queue.ModesChanged += () => _sessionDirty = true;
@@ -255,6 +264,7 @@ public sealed partial class MainWindow : Window
         PageHeader.NavigationRequested += (pageType, param) => ContentFrame.Navigate(pageType, param);
         LoadSidebarPlaylists();
         _ = FavoritesService.LoadAsync();
+        _ = PlaylistService.LoadAsync();
 
         if (!_queue.HasTrack)
         {
@@ -478,6 +488,7 @@ public sealed partial class MainWindow : Window
             Type? pageType = tag switch
             {
                 "home" => typeof(HomePage),
+                "explore" => typeof(ExplorePage),
                 "library" => typeof(LibraryPage),
 #if DEBUG
                 "debug" => typeof(DebugPage),
@@ -509,7 +520,8 @@ public sealed partial class MainWindow : Window
         }
         
         // If we navigated to a root level navigation item (not an artist/album), we could clear the backstack.
-        if (parameter == null && (pageType == typeof(HomePage) || pageType == typeof(LibraryPage) || pageType == typeof(SettingsPage)))
+        if (parameter == null && (pageType == typeof(HomePage) || pageType == typeof(ExplorePage)
+            || pageType == typeof(LibraryPage) || pageType == typeof(SettingsPage)))
         {
             ContentFrame.BackStack.Clear();
             PageHeader.CanGoBack = false;
@@ -518,16 +530,82 @@ public sealed partial class MainWindow : Window
 
     // ?? Back / Forward ??
 
-    private void PageHeader_BackClick(object sender, RoutedEventArgs e)
+    private void PageHeader_BackClick(object sender, RoutedEventArgs e) => GoBack();
+    private void PageHeader_ForwardClick(object sender, RoutedEventArgs e) => GoForward();
+
+    private void GoBack()
     {
         if (ContentFrame.CanGoBack)
             ContentFrame.GoBack();
     }
 
-    private void PageHeader_ForwardClick(object sender, RoutedEventArgs e)
+    private void GoForward()
     {
         if (ContentFrame.CanGoForward)
             ContentFrame.GoForward();
+    }
+
+    // ─── Keyboard shortcuts ─────────────────────────────────────
+
+    /// <summary>
+    /// Space play/pause · Ctrl+←/→ previous/next · Ctrl+↑/↓ volume · Ctrl+S shuffle ·
+    /// Ctrl+R repeat · Ctrl+L like · Ctrl+F search · Alt+←/→ back/forward.
+    /// </summary>
+    private void OnShortcutKeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        var ctrl = IsKeyDown(Windows.System.VirtualKey.Control);
+        var alt = e.KeyStatus.IsMenuKeyDown;
+        var focused = FocusManager.GetFocusedElement(Content.XamlRoot);
+
+        // These work even while typing.
+        if (ctrl && !alt && e.Key == Windows.System.VirtualKey.F) { PageHeader.FocusSearch(); e.Handled = true; return; }
+        if (alt && !ctrl && e.Key == Windows.System.VirtualKey.Left) { GoBack(); e.Handled = true; return; }
+        if (alt && !ctrl && e.Key == Windows.System.VirtualKey.Right) { GoForward(); e.Handled = true; return; }
+
+        // In a text field Space types a space and Ctrl+arrows move by word or paragraph.
+        if (focused is TextBox or PasswordBox or RichEditBox || alt) return;
+
+        if (!ctrl && e.Key == Windows.System.VirtualKey.Space)
+        {
+            // Switches and drop-downs use Space themselves. So do buttons and list rows, but only
+            // when reached with the keyboard: one that merely kept focus after a click shouldn't
+            // swallow the shortcut.
+            if (focused is ToggleSwitch or ComboBox or ComboBoxItem) return;
+            if (focused is Control { FocusState: FocusState.Keyboard }
+                and (Microsoft.UI.Xaml.Controls.Primitives.ButtonBase or Microsoft.UI.Xaml.Controls.Primitives.SelectorItem or NavigationViewItemBase))
+                return;
+            _playback.TogglePlayPause();
+            e.Handled = true;
+            return;
+        }
+
+        if (!ctrl) return;
+        switch (e.Key)
+        {
+            case Windows.System.VirtualKey.Right: _queue.Next(); break;
+            case Windows.System.VirtualKey.Left: _playback.SkipPrevious(); break;
+            case Windows.System.VirtualKey.Up: _playback.Volume += 0.05; break;
+            case Windows.System.VirtualKey.Down: _playback.Volume -= 0.05; break;
+            case Windows.System.VirtualKey.S: _queue.SetShuffle(!_queue.Shuffle); break;
+            case Windows.System.VirtualKey.R: _queue.CycleRepeat(); break;
+            case Windows.System.VirtualKey.L:
+                if (_queue.CurrentTrack is { } track)
+                    _ = FavoritesService.SetTrackLikedAsync(track, !FavoritesService.IsTrackLiked(track.Id));
+                break;
+            default: return;
+        }
+        e.Handled = true;
+    }
+
+    private static bool IsKeyDown(Windows.System.VirtualKey key) =>
+        InputKeyboardSource.GetKeyStateForCurrentThread(key).HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down);
+
+    private void OnNavigationPointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        // The button that went down now, not one still held while another is pressed.
+        var update = e.GetCurrentPoint(MainAppPanel).Properties.PointerUpdateKind;
+        if (update == Microsoft.UI.Input.PointerUpdateKind.XButton1Pressed) GoBack();
+        else if (update == Microsoft.UI.Input.PointerUpdateKind.XButton2Pressed) GoForward();
     }
 
     private void ContentFrame_Navigated(object sender, Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
@@ -585,22 +663,38 @@ public sealed partial class MainWindow : Window
 
     // ?? Sidebar playlists ??
 
+    // Entries this method added, so a reload replaces them instead of appending a second copy.
+    private readonly List<object> _sidebarPlaylistItems = [];
+    private int _sidebarLoadVersion;
+
+    /// <summary>
+    /// The library's playlists (own and saved) under the main navigation. Reloaded when a
+    /// playlist is created or saved, so the sidebar matches the library.
+    /// </summary>
     private async void LoadSidebarPlaylists()
     {
         if (!_api.IsAuthenticated) return;
 
+        // A reload started while an older one is still fetching wins; the older one's result is dropped.
+        var version = ++_sidebarLoadVersion;
         try
         {
-            var result = await _api.GetFavoritePlaylistsAsync(limit: 50);
+            var result = await _api.GetLibraryPlaylistsAsync(limit: 50);
+            if (version != _sidebarLoadVersion) return;
+
             var playlists = result.Items
-                .Where(i => i is not null)
-                .Select(i => i!)
+                .Select(i => i.Playlist)
+                .Where(p => p is not null)
+                .Select(p => p!)
                 .ToList();
 
+            foreach (var old in _sidebarPlaylistItems)
+                NavView.MenuItems.Remove(old);
+            _sidebarPlaylistItems.Clear();
             if (playlists.Count == 0) return;
 
-            NavView.MenuItems.Add(new NavigationViewItemSeparator());
-            NavView.MenuItems.Add(new NavigationViewItemHeader { Content = _resourceLoader.GetString("Sidebar_Playlists") });
+            AddSidebarItem(new NavigationViewItemSeparator());
+            AddSidebarItem(new NavigationViewItemHeader { Content = _resourceLoader.GetString("Sidebar_Playlists") });
 
             foreach (var p in playlists)
             {
@@ -609,6 +703,8 @@ public sealed partial class MainWindow : Window
                     Tag = $"playlist:{p.Uuid}",
                     Icon = new FontIcon { Glyph = Glyphs.Playlist }
                 };
+                // The content is a panel of two lines, which gives the item no name of its own.
+                Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(navItem, p.Title);
 
                 var stack = new StackPanel();
                 stack.Children.Add(new TextBlock
@@ -624,10 +720,16 @@ public sealed partial class MainWindow : Window
                 });
                 navItem.Content = stack;
 
-                NavView.MenuItems.Add(navItem);
+                AddSidebarItem(navItem);
             }
         }
         catch { }
+    }
+
+    private void AddSidebarItem(object item)
+    {
+        NavView.MenuItems.Add(item);
+        _sidebarPlaylistItems.Add(item);
     }
 
     // ?? Playback ??
@@ -747,15 +849,19 @@ public sealed partial class MainWindow : Window
 
         if (failure.ConsecutiveFailures >= MaxConsecutivePlaybackFailures)
         {
-            ShowPlaybackMessage(_resourceLoader.GetString("Playback_RepeatedFailures"));
+            ShowNotice(_resourceLoader.GetString("Playback_RepeatedFailures"));
             return;
         }
 
-        ShowPlaybackMessage(string.Format(_resourceLoader.GetString(
+        ShowNotice(string.Format(_resourceLoader.GetString(
             _queue.Next() ? "Playback_TrackSkipped" : "Playback_TrackFailed"), track.Title));
     }
 
-    private void ShowPlaybackMessage(string message)
+    /// <summary>
+    /// A short message at the bottom of the window that closes by itself: a skipped track,
+    /// "Added to playlist", a save that failed.
+    /// </summary>
+    public void ShowNotice(string message, InfoBarSeverity severity = InfoBarSeverity.Warning)
     {
         if (_playbackMessageTimer is null)
         {
@@ -765,6 +871,7 @@ public sealed partial class MainWindow : Window
             _playbackMessageTimer.Tick += (_, _) => PlaybackInfoBar.IsOpen = false;
         }
 
+        PlaybackInfoBar.Severity = severity;
         PlaybackInfoBar.Message = message;
         PlaybackInfoBar.IsOpen = true;
         _playbackMessageTimer.Stop();

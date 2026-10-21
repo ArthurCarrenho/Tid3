@@ -89,6 +89,22 @@ public class QueueServiceTests
     }
 
     [Fact]
+    public void CycleRepeat_StepsOffAllOneAndBack()
+    {
+        var q = new QueueService();
+        var changes = 0;
+        q.ModesChanged += () => changes++;
+
+        q.CycleRepeat();
+        Assert.Equal(RepeatMode.All, q.Repeat);
+        q.CycleRepeat();
+        Assert.Equal(RepeatMode.One, q.Repeat);
+        q.CycleRepeat();
+        Assert.Equal(RepeatMode.Off, q.Repeat);
+        Assert.Equal(3, changes);
+    }
+
+    [Fact]
     public void RepeatOne_ReplaysOnTrackEnd_ButNextStillLeaves()
     {
         var q = new QueueService();

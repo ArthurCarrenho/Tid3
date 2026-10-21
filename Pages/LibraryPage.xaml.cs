@@ -7,15 +7,18 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using TidalUi3.Controls;
 using TidalUi3.Models;
 using TidalUi3.Services;
 using TidalUi3.Helpers;
-using Microsoft.Windows.ApplicationModel.Resources;
 
 namespace TidalUi3.Pages;
 
 public sealed partial class LibraryPage : Page
 {
+    // Each row shows this many; "see all" pages through the rest.
+    private const int PreviewCount = 20;
+
     private readonly TidalApiClient _api = App.ApiClient;
     private readonly QueueService _queue = App.Queue;
     private readonly ObservableCollection<Track> _likedTracks = [];
@@ -24,6 +27,11 @@ public sealed partial class LibraryPage : Page
     private readonly HashSet<int> _unlikedTrackIds = [];
     private readonly LoadingTrackListPlayer _player;
     private readonly CancellationTokenSource _loadCts = new();
+    // Cards as loaded, each with whether it was in the collection then: removing one from the
+    // library elsewhere hides it, and a failed removal brings it back.
+    private readonly List<(HomeSectionItem Card, bool WasSaved)> _albums = [];
+    private readonly List<(HomeSectionItem Card, bool WasSaved)> _artists = [];
+    private int _playlistsVersion;
     private bool _loaded;
 
     public LibraryPage()
@@ -31,14 +39,22 @@ public sealed partial class LibraryPage : Page
         InitializeComponent();
         _player = new(_queue);
         LikedSongsList.ItemsSource = _likedTracks;
+        AlbumsCarousel.Title = Loc.Get("LibraryAlbums_Title");
+        ArtistsCarousel.Title = Loc.Get("LibraryArtists_Title");
         Loaded += LibraryPage_Loaded;
         FavoritesService.TrackLikedChanged += OnTrackLikedChanged;
+        FavoritesService.Changed += ShowSavedCards;
+        FavoritesService.LibraryPlaylistsChanged += ReloadPlaylists;
+        PlaylistService.Changed += ReloadPlaylists;
 
         Unloaded += (_, _) =>
         {
             // Pages aren't cached, so once this one is gone nobody sees the rest of the list.
             _loadCts.Cancel();
             FavoritesService.TrackLikedChanged -= OnTrackLikedChanged;
+            FavoritesService.Changed -= ShowSavedCards;
+            FavoritesService.LibraryPlaylistsChanged -= ReloadPlaylists;
+            PlaylistService.Changed -= ReloadPlaylists;
         };
     }
 
@@ -62,29 +78,27 @@ public sealed partial class LibraryPage : Page
 
         try
         {
-            var playlistsTask = _api.GetFavoritePlaylistsAsync(limit: 20);
-            var albumsTask = _api.GetFavoriteAlbumsAsync(limit: 20);
+            var playlistsTask = _api.GetLibraryPlaylistsAsync(limit: PreviewCount, ct: _loadCts.Token);
+            var albumsTask = _api.GetFavoriteAlbumsAsync(limit: PreviewCount, ct: _loadCts.Token);
+            var artistsTask = _api.GetFavoriteArtistsAsync(limit: PreviewCount, ct: _loadCts.Token);
             var tracksTask = likedPages.MoveNextAsync().AsTask();
 
-            await Task.WhenAll(playlistsTask, albumsTask, tracksTask);
+            await Task.WhenAll(playlistsTask, albumsTask, artistsTask, tracksTask);
 
-            // Playlists
-            var playlists = await playlistsTask;
-            var playlistItems = playlists.Items
-                .Where(i => i is not null)
-                .Select(i => MapPlaylist(i!))
-                .ToList();
-            UserPlaylistsGrid.ItemsSource = new ObservableCollection<Playlist>(playlistItems);
-            PlaylistsSection.Visibility = playlistItems.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            ShowPlaylists(await playlistsTask);
 
-            // Albums
             var albums = await albumsTask;
-            var albumItems = albums.Items
-                .Where(i => i.Item is not null)
-                .Select(i => MapAlbum(i.Item!))
-                .ToList();
-            AlbumsCarousel.ItemsSource = new ObservableCollection<Album>(albumItems);
-            AlbumsCarousel.Visibility = albumItems.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            foreach (var album in albums.Items)
+                if (album.Item is not null)
+                    _albums.Add((CardMapper.FromAlbum(album.Item), FavoritesService.IsAlbumSaved(album.Item.Id)));
+            AlbumsCarousel.IsShowAllVisible = albums.TotalNumberOfItems > albums.Items.Count;
+
+            var artists = await artistsTask;
+            foreach (var artist in artists.Items)
+                if (artist.Item is not null)
+                    _artists.Add((CardMapper.FromArtist(artist.Item), FavoritesService.IsArtistFollowed(artist.Item.Id)));
+            ArtistsCarousel.IsShowAllVisible = artists.TotalNumberOfItems > artists.Items.Count;
+            ShowSavedCards();
 
             // Liked Tracks
             gotFirstPage = await tracksTask;
@@ -95,6 +109,7 @@ public sealed partial class LibraryPage : Page
         {
             PlaylistsSection.Visibility = Visibility.Collapsed;
             AlbumsCarousel.Visibility = Visibility.Collapsed;
+            ArtistsCarousel.Visibility = Visibility.Collapsed;
             LikedSongsSection.Visibility = Visibility.Collapsed;
         }
         finally
@@ -174,6 +189,48 @@ public sealed partial class LibraryPage : Page
     private void UpdateLikedSongsVisibility() =>
         LikedSongsSection.Visibility = _likedTracks.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
 
+    private void ShowPlaylists(TidalPagedResult<TidalPlaylistEntry> page)
+    {
+        var playlists = page.Items
+            .Where(e => e.Playlist is not null)
+            .Select(e => MapPlaylist(e.Playlist!))
+            .ToList();
+        UserPlaylistsGrid.ItemsSource = new ObservableCollection<Playlist>(playlists);
+        PlaylistsSection.Visibility = playlists.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        PlaylistsShowAll.Visibility = page.TotalNumberOfItems > page.Items.Count ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>A playlist was created, saved or removed: the first page may have changed.</summary>
+    private async void ReloadPlaylists()
+    {
+        if (!_loaded) return;
+        var version = ++_playlistsVersion;
+        try
+        {
+            var page = await _api.GetLibraryPlaylistsAsync(limit: PreviewCount, ct: _loadCts.Token);
+            if (version == _playlistsVersion)
+                ShowPlaylists(page);
+        }
+        catch (Exception ex)
+        {
+            // The list shown is only out of date, which the next visit fixes.
+            System.Diagnostics.Debug.WriteLine($"LibraryPage: reloading playlists failed: {ex.Message}");
+        }
+    }
+
+    private void ShowSavedCards()
+    {
+        Show(AlbumsCarousel, _albums, FavoritesService.IsAlbumSaved);
+        Show(ArtistsCarousel, _artists, FavoritesService.IsArtistFollowed);
+
+        static void Show(CarouselSectionControl carousel, List<(HomeSectionItem Card, bool WasSaved)> cards, Func<int, bool> isSaved)
+        {
+            var shown = cards.Where(c => !c.WasSaved || isSaved(c.Card.NumericId)).Select(c => c.Card).ToList();
+            carousel.ItemsSource = new ObservableCollection<HomeSectionItem>(shown);
+            carousel.Visibility = shown.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+    }
+
     // ─── Click Handlers ────────────────────────────────────────
 
     private void PlaylistItem_Click(object sender, ItemClickEventArgs e)
@@ -182,11 +239,26 @@ public sealed partial class LibraryPage : Page
             Frame.Navigate(typeof(PlaylistDetailPage), playlist.Uuid);
     }
 
-    private void AlbumItem_Click(object sender, ItemClickEventArgs e)
+    private void CardItem_Click(object sender, ItemClickEventArgs e)
     {
-        if (e.ClickedItem is Album album && album.Id > 0)
-            Frame.Navigate(typeof(PlaylistDetailPage), album.Id);
+        if (e.ClickedItem is HomeSectionItem item)
+            ItemNavigator.Open(Frame, item);
     }
+
+    private void PlaylistsShowAll_Click(object sender, RoutedEventArgs e) =>
+        Frame.Navigate(typeof(ItemsGridPage), new ItemsGridRequest(PlaylistsTitle.Text,
+            PagedLoaders.Create((limit, offset, ct) => _api.GetLibraryPlaylistsAsync(limit, offset, ct),
+                (TidalPlaylistEntry entry) => entry.Playlist is { } p ? CardMapper.FromPlaylist(p) : null)));
+
+    private void AlbumsShowAll_Click(object sender, RoutedEventArgs e) =>
+        Frame.Navigate(typeof(ItemsGridPage), new ItemsGridRequest(AlbumsCarousel.Title,
+            PagedLoaders.Create((limit, offset, ct) => _api.GetFavoriteAlbumsAsync(limit, offset, ct),
+                (TidalAlbumItem entry) => entry.Item is { } a ? CardMapper.FromAlbum(a) : null)));
+
+    private void ArtistsShowAll_Click(object sender, RoutedEventArgs e) =>
+        Frame.Navigate(typeof(ItemsGridPage), new ItemsGridRequest(ArtistsCarousel.Title,
+            PagedLoaders.Create((limit, offset, ct) => _api.GetFavoriteArtistsAsync(limit, offset, ct),
+                (TidalArtistItem entry) => entry.Item is { } a ? CardMapper.FromArtist(a) : null)));
 
     private void TrackItem_Click(object sender, ItemClickEventArgs e)
     {
@@ -209,26 +281,13 @@ public sealed partial class LibraryPage : Page
         return track;
     }
 
-    private static Album MapAlbum(TidalAlbum a)
-    {
-        var loader = new ResourceLoader();
-        return new()
-        {
-            Id = a.Id,
-            Title = a.Title,
-            Artist = a.Artist?.Name ?? a.Artists.FirstOrDefault()?.Name ?? loader.GetString("Library_UnknownArtist"),
-            ArtistId = a.Artist?.Id ?? a.Artists.FirstOrDefault()?.Id ?? 0,
-            Year = a.ReleaseDate?[..4] ?? "",
-            CoverUrl = TidalApiClient.GetImageUrl(a.Cover, 320, 320)
-        };
-    }
-
     private static Playlist MapPlaylist(TidalPlaylist p) => new()
     {
         Uuid = p.Uuid,
         Title = p.Title,
         Description = p.Description,
         TrackCount = p.NumberOfTracks,
+        TrackCountText = Loc.Format("PlaylistDetail_Tracks", p.NumberOfTracks),
         Duration = FormatHelper.FormatPlaylistDuration(p.Duration),
         CoverUrl = TidalApiClient.GetImageUrl(p.SquareImage ?? p.Image, 320, 320)
     };

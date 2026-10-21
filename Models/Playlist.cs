@@ -12,6 +12,10 @@ public class Playlist
     public string Color { get; set; } = "#4A90D9";
     public string CoverUrl { get; set; } = string.Empty;
     public int TrackCount { get; set; }
+    public string TrackCountText { get; set; } = string.Empty;
     public string Duration { get; set; } = string.Empty;
     public List<Track> Tracks { get; set; } = new();
+
+    // Lists name their rows after the item, which is what screen readers announce.
+    public override string ToString() => Title;
 }

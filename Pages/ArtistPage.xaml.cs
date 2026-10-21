@@ -35,8 +35,29 @@ public sealed partial class ArtistPage : Page
         if (e.Parameter is int artistId)
         {
             _artistId = artistId;
+            FavoritesService.Changed += UpdateFollowButton;
+            UpdateFollowButton();
             LoadArtist(artistId);
         }
+    }
+
+    protected override void OnNavigatedFrom(NavigationEventArgs e)
+    {
+        base.OnNavigatedFrom(e);
+        FavoritesService.Changed -= UpdateFollowButton;
+    }
+
+    private void UpdateFollowButton()
+    {
+        var following = FavoritesService.IsArtistFollowed(_artistId);
+        FollowButton.Glyph = following ? Glyphs.LikeFilled : Glyphs.Like;
+        FollowButton.Text = _resourceLoader.GetString(following ? "Artist_Following" : "Artist_Follow");
+    }
+
+    private async void FollowButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!await FavoritesService.SetArtistFollowedAsync(_artistId, !FavoritesService.IsArtistFollowed(_artistId)))
+            App.MainWindow?.ShowNotice(_resourceLoader.GetString("Library_SaveFailed"), InfoBarSeverity.Error);
     }
 
     private async void LoadArtist(int artistId)

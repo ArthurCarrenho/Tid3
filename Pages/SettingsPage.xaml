@@ -113,6 +113,21 @@
             </controls:SettingsCardControl>
 
             <controls:SettingsCardControl
+                IconGlyph="&#xE7F5;"
+                x:Uid="SettingsPlayback_OutputDevice"
+            >
+                <controls:SettingsCardControl.ActionContent>
+                    <ComboBox
+                        x:Name="OutputDeviceCombo"
+                        DisplayMemberPath="Name"
+                        SelectionChanged="OutputDeviceCombo_SelectionChanged"
+                        MinWidth="150"
+                        MaxWidth="260"
+                    />
+                </controls:SettingsCardControl.ActionContent>
+            </controls:SettingsCardControl>
+
+            <controls:SettingsCardControl
                 IconGlyph="&#xE8EE;"
                 x:Uid="SettingsPlayback_TrackRadio"
             >
@@ -277,7 +292,8 @@
             </Grid>
 
             <!-- Cloud Sync -->
-            <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+            <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                      AutomationProperties.LabeledBy="{Binding ElementName=CloudSyncTitle}">
                 <Expander.Header>
                     <Grid Padding="0,8" ColumnSpacing="14">
                         <Grid.ColumnDefinitions>
@@ -289,7 +305,7 @@
                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                   VerticalAlignment="Center" />
                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
-                            <TextBlock x:Uid="SettingsIntegrations_CloudSync" Style="{StaticResource BodyTextBlockStyle}" />
+                            <TextBlock x:Name="CloudSyncTitle" x:Uid="SettingsIntegrations_CloudSync" Style="{StaticResource BodyTextBlockStyle}" />
                             <TextBlock x:Uid="SettingsIntegrations_CloudSync_Desc"
                                        Style="{StaticResource CaptionTextBlockStyle}"
                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -419,6 +435,36 @@
                     <ToggleSwitch x:Name="NotificationsSwitch" Toggled="NotificationsSwitch_Toggled" MinWidth="0" />
                 </controls:SettingsCardControl.ActionContent>
             </controls:SettingsCardControl>
+
+            <!-- Keyboard shortcuts (rows filled from code) -->
+            <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                      AutomationProperties.LabeledBy="{Binding ElementName=ShortcutsTitle}">
+                <Expander.Header>
+                    <Grid Padding="0,8" ColumnSpacing="14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Glyph="&#xE92E;" FontSize="20"
+                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                  VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                            <TextBlock x:Name="ShortcutsTitle" x:Uid="SettingsGeneral_Shortcuts" Style="{StaticResource BodyTextBlockStyle}" />
+                            <TextBlock x:Uid="SettingsGeneral_Shortcuts_Desc"
+                                       Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                    </Grid>
+                </Expander.Header>
+                <Expander.Content>
+                    <Grid x:Name="ShortcutsGrid" ColumnSpacing="24" RowSpacing="10" Padding="0,4,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                    </Grid>
+                </Expander.Content>
+            </Expander>
 
             <!-- ════════════════════════════════════════ -->
             <!-- STORAGE                                  -->

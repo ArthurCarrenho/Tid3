@@ -53,10 +53,45 @@ namespace TidalUi3.Controls
                 control.ItemsGrid.ItemTemplate = (DataTemplate)e.NewValue;
         }
 
+        public static readonly DependencyProperty ItemTemplateSelectorProperty =
+            DependencyProperty.Register("ItemTemplateSelector", typeof(DataTemplateSelector), typeof(CarouselSectionControl), new PropertyMetadata(null, OnItemTemplateSelectorChanged));
+
+        public DataTemplateSelector ItemTemplateSelector
+        {
+            get => (DataTemplateSelector)GetValue(ItemTemplateSelectorProperty);
+            set => SetValue(ItemTemplateSelectorProperty, value);
+        }
+
+        private static void OnItemTemplateSelectorChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (d is CarouselSectionControl control)
+                control.ItemsGrid.ItemTemplateSelector = (DataTemplateSelector)e.NewValue;
+        }
+
+        /// <summary>Shows the "See all" link next to the title.</summary>
+        public static readonly DependencyProperty IsShowAllVisibleProperty =
+            DependencyProperty.Register("IsShowAllVisible", typeof(bool), typeof(CarouselSectionControl), new PropertyMetadata(false, OnIsShowAllVisibleChanged));
+
+        public bool IsShowAllVisible
+        {
+            get => (bool)GetValue(IsShowAllVisibleProperty);
+            set => SetValue(IsShowAllVisibleProperty, value);
+        }
+
+        private static void OnIsShowAllVisibleChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (d is CarouselSectionControl control)
+                control.ShowAllButton.Visibility = (bool)e.NewValue ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        public event RoutedEventHandler? ShowAllClick;
+
         public CarouselSectionControl()
         {
             this.InitializeComponent();
             ItemsGrid.ItemClick += (s, e) => ItemClick?.Invoke(s, e);
         }
+
+        private void ShowAllButton_Click(object sender, RoutedEventArgs e) => ShowAllClick?.Invoke(this, e);
     }
 }

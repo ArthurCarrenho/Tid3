@@ -110,4 +110,7 @@ public class Track : INotifyPropertyChanged
             IsExplicit = this.IsExplicit
         };
     }
+
+    // Lists name their rows after the item, which is what screen readers announce.
+    public override string ToString() => string.IsNullOrEmpty(Artist) ? Title : $"{Title}, {Artist}";
 }

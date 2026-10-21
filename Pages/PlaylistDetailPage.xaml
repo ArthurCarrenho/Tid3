@@ -72,6 +72,13 @@
                                     Glyph="&#xE8B1;"
                                     Click="ShufflePlayButton_Click"
                                 />
+                                <!-- Save an album, or someone else's playlist, to the library -->
+                                <controls:IconButtonControl
+                                    x:Name="SaveButton"
+                                    Glyph="&#xEB51;"
+                                    Visibility="Collapsed"
+                                    Click="SaveButton_Click"
+                                />
                             </StackPanel>
                         </StackPanel>
                     </Grid>

@@ -13,11 +13,13 @@ namespace TidalUi3.Pages;
 public sealed partial class SettingsPage : Page
 {
     private bool _isLoading = true; // prevents event handlers firing during init
+    private bool _fillingOutputs;
     private readonly ResourceLoader _rl = new();
 
     public SettingsPage()
     {
         InitializeComponent();
+        FillShortcuts();
         var version = Package.Current.Id.Version;
         VersionText.Text = $"{_rl.GetString("SettingsAbout_Version_Prefix")}{version.Major}.{version.Minor}.{version.Build}";
     }
@@ -84,6 +86,10 @@ public sealed partial class SettingsPage : Page
         // Startup task
         await LoadStartupStateAsync();
 
+        // Output device: the list follows devices coming and going while the page is open.
+        App.Playback.OutputDeviceChanged += OnOutputDeviceChanged;
+        await LoadOutputDevicesAsync();
+
         // Last.fm credentials
         LastFmApiKeyBox.Text = SettingsService.LastFmApiKey;
         LastFmApiSecretBox.Password = SettingsService.LastFmApiSecret;
@@ -107,6 +113,7 @@ public sealed partial class SettingsPage : Page
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
         base.OnNavigatedFrom(e);
+        App.Playback.OutputDeviceChanged -= OnOutputDeviceChanged;
         var sync = App.MainWindow?.Sync;
         if (sync != null)
         {
@@ -125,6 +132,69 @@ public sealed partial class SettingsPage : Page
         if (_isLoading) return;
         if (QualityCombo.SelectedItem is ComboBoxItem item && item.Tag is string quality)
             SettingsService.AudioQuality = quality;
+    }
+
+    // ── Keyboard shortcuts ─────────────────────────────────────
+
+    // Kept in step with MainWindow.OnShortcutKeyDown.
+    private void FillShortcuts()
+    {
+        (string Keys, string Action)[] shortcuts =
+        [
+            (_rl.GetString("Shortcut_SpaceKey"), "Shortcut_PlayPause"),
+            ("Ctrl + →", "Shortcut_Next"),
+            ("Ctrl + ←", "Shortcut_Previous"),
+            ("Ctrl + ↑ / ↓", "Shortcut_Volume"),
+            ("Ctrl + S", "Shortcut_Shuffle"),
+            ("Ctrl + R", "Shortcut_Repeat"),
+            ("Ctrl + L", "Shortcut_Like"),
+            ("Ctrl + F", "Shortcut_Search"),
+            ("Alt + ← / →", "Shortcut_BackForward"),
+            (_rl.GetString("Shortcut_MouseKeys"), "Shortcut_BackForward"),
+        ];
+
+        foreach (var (keys, action) in shortcuts)
+        {
+            var row = ShortcutsGrid.RowDefinitions.Count;
+            ShortcutsGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+            var keyCap = new Border
+            {
+                Background = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["SubtleFillColorSecondaryBrush"],
+                BorderBrush = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"],
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(4),
+                Padding = new Thickness(8, 2, 8, 3),
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Child = new TextBlock { Text = keys, Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"] },
+            };
+            var label = new TextBlock { Text = _rl.GetString(action), VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap };
+            Grid.SetRow(keyCap, row);
+            Grid.SetRow(label, row);
+            Grid.SetColumn(label, 1);
+            ShortcutsGrid.Children.Add(keyCap);
+            ShortcutsGrid.Children.Add(label);
+        }
+    }
+
+    // ── Output device ──────────────────────────────────────────
+
+    private async Task LoadOutputDevicesAsync()
+    {
+        var (choices, current) = await App.Playback.GetOutputChoicesAsync();
+        _fillingOutputs = true;
+        OutputDeviceCombo.ItemsSource = choices;
+        OutputDeviceCombo.SelectedIndex = current;
+        _fillingOutputs = false;
+    }
+
+    private async void OnOutputDeviceChanged() => await LoadOutputDevicesAsync();
+
+    private async void OutputDeviceCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_isLoading || _fillingOutputs) return;
+        if (OutputDeviceCombo.SelectedItem is AudioOutputDevice device)
+            await App.Playback.SetOutputDeviceAsync(device.Id);
     }
 
     // ── Theme ──────────────────────────────────────────────────

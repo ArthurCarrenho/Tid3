@@ -228,6 +228,12 @@ namespace TidalUi3.Controls
             HeaderSearchBox.Text = "";
         }
 
+        /// <summary>Puts the cursor in the search box (Ctrl+F).</summary>
+        public void FocusSearch()
+        {
+            HeaderSearchBox.Focus(FocusState.Keyboard);
+        }
+
         /// <summary>
         /// Closes the suggestion list but keeps the typed text. The list only closes by
         /// itself when the box loses focus, which clicking a non-focusable part of the page

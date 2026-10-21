@@ -15,7 +15,9 @@ namespace TidalUi3.Helpers;
 /// </summary>
 public static class TrackContextMenu
 {
-    public static void Show(object sender, RightTappedRoutedEventArgs e, QueueService queue, Action<Type, object> navigate)
+    /// <param name="addItems">Lets the page add items of its own at the end, such as "Remove from this playlist".</param>
+    public static void Show(object sender, RightTappedRoutedEventArgs e, QueueService queue, Action<Type, object> navigate,
+        Action<MenuFlyout, Track>? addItems = null)
     {
         // Walk up visual tree to find Track DataContext
         Track? track = null;
@@ -37,7 +39,9 @@ public static class TrackContextMenu
 
         var menu = new MenuFlyout();
         PopulateForTrack(menu, track, queue, navigate);
+        addItems?.Invoke(menu, track);
         menu.ShowAt(source, new FlyoutShowOptions { Position = e.GetPosition(source) });
+        e.Handled = true;
     }
 
     /// <summary>
@@ -91,6 +95,7 @@ public static class TrackContextMenu
                 Loc.Get(isLiked ? "Menu_Unlike" : "Menu_Like"),
                 isLiked ? Glyphs.LikeFilled : Glyphs.Like,
                 new RelayCommand(() => _ = FavoritesService.SetTrackLikedAsync(track, !isLiked))));
+            menu.Items.Add(PlaylistActions.CreateAddToPlaylistMenu([track]));
         }
 
         menu.Items.Add(new MenuFlyoutSeparator());
@@ -103,7 +108,10 @@ public static class TrackContextMenu
             menu.Items.Add(CreateMenuItem(Loc.Get("Menu_GoToArtist"), Glyphs.Artist, new RelayCommand(() => navigate(typeof(ArtistPage), track.ArtistId))));
 
         if (track.Id > 0)
+        {
             menu.Items.Add(CreateMenuItem(Loc.Get("Menu_GoToRadio"), Glyphs.Radio, new RelayCommand(() => navigate(typeof(PlaylistDetailPage), $"radio:{track.Id}"))));
+            menu.Items.Add(CreateMenuItem(Loc.Get("Menu_Credits"), Glyphs.Credits, new RelayCommand(() => _ = CreditsDialog.ShowAsync(track, navigate))));
+        }
     }
 
     /// <summary>

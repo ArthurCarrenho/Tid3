@@ -12,6 +12,9 @@ public class HomeSectionItem
     public string ItemType { get; set; } = string.Empty; // "mix", "album", "track", "artist"
     public int ArtistId { get; set; }
     public bool IsExplicit { get; set; }
+
+    // Lists name their rows after the item, which is what screen readers announce.
+    public override string ToString() => Title;
 }
 
 public class HomeSection

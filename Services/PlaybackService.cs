@@ -1,9 +1,13 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Windows.Devices.Enumeration;
 using Windows.Media;
 using Windows.Media.Core;
+using Windows.Media.Devices;
 using Windows.Media.Playback;
 using Windows.Media.Streaming.Adaptive;
 using Windows.Storage.Streams;
@@ -17,6 +21,13 @@ namespace TidalUi3.Services;
 /// loaded paused, like the one a restored session opens with.</param>
 /// <param name="ConsecutiveFailures">Failures since a track last opened successfully.</param>
 public readonly record struct PlaybackFailure(int TrackId, bool WasPlaying, int ConsecutiveFailures);
+
+/// <summary>An audio output to play through. The system default has an empty id.</summary>
+public sealed record AudioOutputDevice(string Id, string Name)
+{
+    // What lists and screen readers show for the item.
+    public override string ToString() => Name;
+}
 
 public sealed class PlaybackService : IDisposable
 {
@@ -160,6 +171,9 @@ public sealed class PlaybackService : IDisposable
         _player.MediaFailed += OnMediaFailed;
         _player.PlaybackSession.PlaybackStateChanged += OnPlaybackStateChanged;
         _player.Volume = 0.75;
+
+        _ = ApplyOutputDeviceAsync();
+        StartOutputWatcher();
     }
 
     public async Task PlayTrackAsync(int trackId, string? coverUrl = null,
@@ -817,8 +831,97 @@ public sealed class PlaybackService : IDisposable
     [System.Diagnostics.Conditional("DEBUG")]
     private static void Trace(string msg) => AppLog.Trace(msg);
 
+    // ── Output device ──
+
+    private DeviceWatcher? _outputWatcher;
+    private int _outputVersion;
+
+    /// <summary>Raised on the UI thread when the device playing changes, also when the chosen one goes away or comes back.</summary>
+    public event Action? OutputDeviceChanged;
+
+    /// <summary>
+    /// The system default followed by every output Windows has enabled now, for the device
+    /// pickers, and which of them is in use.
+    /// </summary>
+    public async Task<(List<AudioOutputDevice> Choices, int Current)> GetOutputChoicesAsync()
+    {
+        var choices = new List<AudioOutputDevice> { new(string.Empty, Loc.Get("AudioOutput_Default")) };
+        try
+        {
+            var devices = await DeviceInformation.FindAllAsync(MediaDevice.GetAudioRenderSelector());
+            choices.AddRange(devices.Select(d => new AudioOutputDevice(d.Id, d.Name)).OrderBy(d => d.Name));
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"PlaybackService: listing audio outputs failed: {ex.Message}");
+        }
+
+        var activeId = _player.AudioDevice?.Id ?? string.Empty;
+        return (choices, Math.Max(0, choices.FindIndex(d => d.Id == activeId)));
+    }
+
+    /// <summary>Plays through <paramref name="deviceId"/> from now on and after restarts; empty follows the system default.</summary>
+    public Task SetOutputDeviceAsync(string deviceId)
+    {
+        SettingsService.OutputDeviceId = deviceId.Length > 0 ? deviceId : null;
+        return ApplyOutputDeviceAsync();
+    }
+
+    // The chosen device may be unplugged or disabled. Play through the default meanwhile and
+    // switch back when the watcher sees it again; the setting stays as the user left it.
+    private async Task ApplyOutputDeviceAsync()
+    {
+        var version = ++_outputVersion;
+        var id = SettingsService.OutputDeviceId;
+        DeviceInformation? device = null;
+        if (id is not null)
+        {
+            try
+            {
+                // The render selector keeps only enabled endpoints, so an unplugged one isn't found.
+                var devices = await DeviceInformation.FindAllAsync(MediaDevice.GetAudioRenderSelector());
+                device = devices.FirstOrDefault(d => d.Id == id);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"PlaybackService: finding the audio output failed: {ex.Message}");
+            }
+        }
+
+        // A later choice may have been made while this one was looking.
+        if (version != _outputVersion || _player.AudioDevice?.Id == device?.Id) return;
+        _player.AudioDevice = device;
+        OutputDeviceChanged?.Invoke();
+    }
+
+    private void StartOutputWatcher()
+    {
+        try
+        {
+            _outputWatcher = DeviceInformation.CreateWatcher(MediaDevice.GetAudioRenderSelector());
+            _outputWatcher.Added += (_, info) => OnOutputDeviceListChanged(info.Id);
+            _outputWatcher.Removed += (_, update) => OnOutputDeviceListChanged(update.Id);
+            _outputWatcher.Updated += (_, update) => OnOutputDeviceListChanged(update.Id);
+            _outputWatcher.Start();
+        }
+        catch (Exception ex)
+        {
+            // Without it the app still plays; it just won't follow the device in and out.
+            System.Diagnostics.Debug.WriteLine($"PlaybackService: audio output watcher failed: {ex.Message}");
+        }
+    }
+
+    // Watcher events arrive on a background thread, and at start once per existing device.
+    private void OnOutputDeviceListChanged(string id)
+    {
+        if (id == SettingsService.OutputDeviceId)
+            App.MainWindow?.DispatcherQueue.TryEnqueue(() => _ = ApplyOutputDeviceAsync());
+    }
+
     public void Dispose()
     {
+        if (_outputWatcher is { Status: DeviceWatcherStatus.Started or DeviceWatcherStatus.EnumerationCompleted })
+            _outputWatcher.Stop();
         App.Queue.Queue.CollectionChanged -= OnQueueCollectionChanged;
         App.Queue.ModesChanged -= ScheduleGaplessRevalidation;
         Unsubscribe(_playbackList);

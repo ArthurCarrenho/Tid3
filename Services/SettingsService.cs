@@ -72,6 +72,13 @@ public static class SettingsService
         set => Settings.Values["GaplessPlayback"] = value;
     }
 
+    /// <summary>The audio output picked in the app; null plays through the system default.</summary>
+    public static string? OutputDeviceId
+    {
+        get => Settings.Values["OutputDeviceId"] is string { Length: > 0 } id ? id : null;
+        set => Settings.Values["OutputDeviceId"] = value;
+    }
+
     public static bool DiscordRichPresence
     {
         get => Settings.Values["DiscordRichPresence"] is bool b ? b : false;

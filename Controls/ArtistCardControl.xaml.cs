@@ -26,6 +26,20 @@ namespace TidalUi3.Controls
         public ArtistCardControl()
         {
             this.InitializeComponent();
+            // Same menu as the other cards: open the artist, follow or unfollow.
+            RightTapped += (sender, e) =>
+            {
+                if (FindFrame(this) is { } frame)
+                    Helpers.MediaCardContextMenu.Show(sender, e, frame);
+            };
+        }
+
+        private static Frame? FindFrame(DependencyObject element)
+        {
+            for (var current = element; current is not null; current = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(current))
+                if (current is Page page)
+                    return page.Frame;
+            return null;
         }
     }
 }

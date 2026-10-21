@@ -300,6 +300,51 @@ public class TidalPlaylistItem
     public string Created { get; set; } = string.Empty;
 }
 
+public class TidalArtistItem
+{
+    [JsonPropertyName("item")]
+    public TidalArtist? Item { get; set; }
+
+    [JsonPropertyName("created")]
+    public string Created { get; set; } = string.Empty;
+}
+
+/// <summary>Entry of users/{id}/playlistsAndFavoritePlaylists: the user's own and saved playlists in one list.</summary>
+public class TidalPlaylistEntry
+{
+    [JsonPropertyName("type")]
+    public string Type { get; set; } = string.Empty;
+
+    [JsonPropertyName("created")]
+    public string Created { get; set; } = string.Empty;
+
+    [JsonPropertyName("playlist")]
+    public TidalPlaylist? Playlist { get; set; }
+}
+
+/// <summary>What the user has favorited, by kind (users/{id}/favorites/ids).</summary>
+public sealed record FavoriteIdSets(HashSet<int> Tracks, HashSet<int> Albums, HashSet<int> Artists, HashSet<string> Playlists);
+
+/// <summary>One role on a track (Composer, Producer…) and who filled it.</summary>
+public class TidalCredit
+{
+    [JsonPropertyName("type")]
+    public string Type { get; set; } = string.Empty;
+
+    [JsonPropertyName("contributors")]
+    public List<TidalContributor> Contributors { get; set; } = [];
+}
+
+public class TidalContributor
+{
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>The artist id, when the contributor has a page on TIDAL.</summary>
+    [JsonPropertyName("id")]
+    public int? Id { get; set; }
+}
+
 public class TidalPlaylist
 {
     [JsonPropertyName("uuid")]

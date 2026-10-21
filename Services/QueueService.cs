@@ -116,6 +116,14 @@ public sealed class QueueService
         RaiseCurrentTrackChanged(autoPlay, startPosition);
     }
 
+    /// <summary>Off → all → one → off, the order the repeat button and its shortcut step through.</summary>
+    public void CycleRepeat() => Repeat = _repeat switch
+    {
+        RepeatMode.Off => RepeatMode.All,
+        RepeatMode.All => RepeatMode.One,
+        _ => RepeatMode.Off
+    };
+
     /// <summary>Sets shuffle and repeat flags without reordering anything.</summary>
     public void SetModes(bool shuffle, RepeatMode repeat)
     {
