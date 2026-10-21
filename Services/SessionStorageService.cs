@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Windows.Security.Cryptography;
 using Windows.Security.Cryptography.DataProtection;
@@ -26,20 +27,29 @@ public static class SessionStorageService
     private const string FileName = "session.dat";
     private static readonly StorageFolder _cacheFolder = ApplicationData.Current.LocalCacheFolder;
 
+    // The periodic save and the one on exit can overlap; two writers replacing the same
+    // file at once make one of them fail, possibly the newer one.
+    private static readonly SemaphoreSlim _saveLock = new(1, 1);
+
     public static async Task SaveAsync(SessionState state)
     {
+        await _saveLock.WaitAsync();
         try
         {
             var json = JsonSerializer.Serialize(state, TidalApiClient.JsonOptions);
             var buffer = CryptographicBuffer.ConvertStringToBinary(json, BinaryStringEncoding.Utf8);
-            
+
             var provider = new DataProtectionProvider("LOCAL=user");
             var encryptedBuffer = await provider.ProtectAsync(buffer);
-            
+
             var file = await _cacheFolder.CreateFileAsync(FileName, CreationCollisionOption.ReplaceExisting);
             await FileIO.WriteBufferAsync(file, encryptedBuffer);
         }
         catch { }
+        finally
+        {
+            _saveLock.Release();
+        }
     }
 
     public static async Task<SessionState?> LoadAsync()
@@ -59,5 +69,15 @@ public static class SessionStorageService
         {
             return null;
         }
+    }
+
+    public static async Task ClearAsync()
+    {
+        try
+        {
+            var file = await _cacheFolder.GetFileAsync(FileName);
+            await file.DeleteAsync();
+        }
+        catch { /* nothing saved yet */ }
     }
 }

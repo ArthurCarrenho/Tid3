@@ -64,9 +64,21 @@ namespace TidalUi3.Controls
         private CancellationTokenSource? _searchCts;
         private Task? _searchDebounceTask;
 
+        // Suggestions may only open the list while the user is in the box. Results that
+        // arrive after focus moved on must not pop it back open over the page.
+        private bool _isSearchFocused;
+
         public PageHeaderControl()
         {
             this.InitializeComponent();
+            Unloaded += (_, _) => CancelPendingSearch();
+
+            HeaderSearchBox.GotFocus += (_, _) => _isSearchFocused = true;
+            HeaderSearchBox.LostFocus += (_, _) =>
+            {
+                _isSearchFocused = false;
+                CancelPendingSearch();
+            };
         }
 
         private void BackButton_Click(object sender, RoutedEventArgs e) => BackClick?.Invoke(sender, e);
@@ -77,18 +89,27 @@ namespace TidalUi3.Controls
             if (args.Reason != AutoSuggestionBoxTextChangeReason.UserInput)
                 return;
 
-            _searchCts?.Cancel();
-            _searchCts = new CancellationTokenSource();
-            var ct = _searchCts.Token;
+            CancelPendingSearch();
             var query = sender.Text?.Trim() ?? "";
 
             if (query.Length < 2 || ApiClient?.IsAuthenticated != true)
             {
                 sender.ItemsSource = null;
+                sender.IsSuggestionListOpen = false;
                 return;
             }
 
-            _searchDebounceTask = DebounceSearchAsync(sender, query, ct);
+            _searchCts = new CancellationTokenSource();
+            _searchDebounceTask = DebounceSearchAsync(sender, query, _searchCts.Token);
+        }
+
+        // Dispose the superseded source as well: a new one is created on every
+        // keystroke, so cancelling without disposing leaks one per character typed.
+        private void CancelPendingSearch()
+        {
+            _searchCts?.Cancel();
+            _searchCts?.Dispose();
+            _searchCts = null;
         }
 
         private async Task DebounceSearchAsync(AutoSuggestBox box, string query, CancellationToken ct)
@@ -117,12 +138,15 @@ namespace TidalUi3.Controls
                 if (hits.Tracks?.Items is { Count: > 0 } tracks)
                 {
                     foreach (var t in tracks.Take(3))
+                    {
+                        var artistName = t.Artist?.Name ?? t.Artists.FirstOrDefault()?.Name ?? "";
                         suggestions.Add(new SearchSuggestion
                         {
                             Type = "track",
                             IsRichResult = true,
                             Display = t.Title,
-                            Subtitle = $"Song · {t.Artist?.Name ?? t.Artists.FirstOrDefault()?.Name ?? ""}",
+                            Subtitle = Loc.Format("Search_SuggestionTrack", artistName),
+                            ArtistName = artistName,
                             CoverUrl = TidalApiClient.GetImageUrl(t.Album?.Cover, 80, 80) ?? "",
                             IsExplicit = t.Explicit,
                             TrackId = t.Id,
@@ -130,22 +154,27 @@ namespace TidalUi3.Controls
                             Id = t.Album?.Id ?? 0,
                             ArtistId = t.Artist?.Id ?? t.Artists.FirstOrDefault()?.Id ?? 0
                         });
+                    }
                 }
 
                 // Rich: Albums
                 if (hits.Albums?.Items is { Count: > 0 } albums)
                 {
                     foreach (var a in albums.Take(2))
+                    {
+                        var artistName = a.Artist?.Name ?? a.Artists.FirstOrDefault()?.Name ?? "";
                         suggestions.Add(new SearchSuggestion
                         {
                             Type = "album",
                             IsRichResult = true,
                             Display = a.Title,
-                            Subtitle = $"Album · {a.Artist?.Name ?? a.Artists.FirstOrDefault()?.Name ?? ""}",
+                            Subtitle = Loc.Format("Search_SuggestionAlbum", artistName),
+                            ArtistName = artistName,
                             CoverUrl = TidalApiClient.GetImageUrl(a.Cover, 80, 80) ?? "",
                             Id = a.Id,
                             Name = a.Title
                         });
+                    }
                 }
 
                 // Rich: Artists
@@ -157,7 +186,7 @@ namespace TidalUi3.Controls
                             Type = "artist",
                             IsRichResult = true,
                             Display = a.Name,
-                            Subtitle = "Artist",
+                            Subtitle = Loc.Get("Search_SuggestionArtist"),
                             CoverUrl = TidalApiClient.GetImageUrl(a.Picture, 80, 80) ?? "",
                             Id = a.Id,
                             Name = a.Name
@@ -166,8 +195,12 @@ namespace TidalUi3.Controls
 
                 _ = DispatcherQueue.TryEnqueue(() =>
                 {
-                    if (!ct.IsCancellationRequested)
-                        box.ItemsSource = suggestions;
+                    // Stale if the box was cleared (search submitted), edited, or left since.
+                    // Assigning ItemsSource reopens the list, which is what kept it stuck open.
+                    if (ct.IsCancellationRequested || !_isSearchFocused
+                        || (box.Text?.Trim() ?? "") != query)
+                        return;
+                    box.ItemsSource = suggestions;
                 });
             }
             catch (OperationCanceledException) { }
@@ -179,18 +212,31 @@ namespace TidalUi3.Controls
             SearchSubmitted?.Invoke(sender, args);
         }
 
+        // UpdateTextOnSelect="False" in XAML keeps the typed text when suggestions are
+        // browsed with the arrow keys, so nothing needs to be restored here.
         private void HeaderSearchBox_SuggestionChosen(AutoSuggestBox sender, AutoSuggestBoxSuggestionChosenEventArgs args)
-        {
-            // Prevent the search box from replacing text with ToString()
-            if (args.SelectedItem is SearchSuggestion s && s.IsRichResult)
-                sender.Text = sender.Text; // keep current text
+            => SuggestionChosen?.Invoke(sender, args);
 
-            SuggestionChosen?.Invoke(sender, args);
-        }
-
+        /// <summary>
+        /// Empties the box and closes the suggestion list. A search still in flight is
+        /// cancelled too; otherwise its results land afterwards and reopen the list.
+        /// </summary>
         public void ClearSearch()
         {
+            CloseSuggestions();
+            HeaderSearchBox.ItemsSource = null;
             HeaderSearchBox.Text = "";
+        }
+
+        /// <summary>
+        /// Closes the suggestion list but keeps the typed text. The list only closes by
+        /// itself when the box loses focus, which clicking a non-focusable part of the page
+        /// does not do.
+        /// </summary>
+        public void CloseSuggestions()
+        {
+            CancelPendingSearch();
+            HeaderSearchBox.IsSuggestionListOpen = false;
         }
 
         private void SuggestionItem_Loaded(object sender, RoutedEventArgs e)
@@ -207,7 +253,11 @@ namespace TidalUi3.Controls
             {
                 var menu = new MenuFlyout();
 
-                TrackContextMenu.PopulateForSuggestion(menu, s, App.Queue, (t, p) => NavigationRequested?.Invoke(t, p));
+                TrackContextMenu.PopulateForSuggestion(menu, s, App.Queue, (t, p) =>
+                {
+                    NavigationRequested?.Invoke(t, p);
+                    ClearSearch();
+                });
 
                 if (menu.Items.Count > 0)
                 {

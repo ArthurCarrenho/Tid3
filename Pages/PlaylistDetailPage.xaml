@@ -11,84 +11,87 @@
 
     <Grid>
         <controls:LoadingOverlayControl x:Name="DetailLoading" />
-        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,16,0">
-            <StackPanel Spacing="24" Padding="36,24,36,120">
 
-                <!-- Navigation -->
-                <controls:BackButtonControl ShowLabel="True" />
+        <!-- The ListView does the scrolling itself, with everything above the tracks in its
+             header. Inside an outer ScrollViewer it would get unlimited height and create a
+             row for every track at once instead of only the visible ones. -->
+        <ListView
+            x:Name="TracksList"
+            Padding="36,24,52,120"
+            SelectionMode="None"
+            IsItemClickEnabled="True"
+            ItemClick="TrackItem_Click"
+            RightTapped="TrackItem_RightTapped"
+        >
+            <ListView.Header>
+                <StackPanel Spacing="24" Margin="0,0,0,8">
 
-                <!-- Header -->
-                <Grid ColumnSpacing="24">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="180" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <controls:ImagePlaceholderControl
-                        x:Name="HeaderCoverControl"
-                        Width="180"
-                        Height="180"
-                        FallbackGlyph="&#xE8D6;"
-                        IconSize="48"
-                        ImageCornerRadius="8"
-                    />
-                    <StackPanel
-                        Grid.Column="1"
-                        VerticalAlignment="Center"
-                        Spacing="8"
-                    >
-                        <TextBlock
-                            x:Name="HeaderTitle"
-                            Style="{StaticResource TitleTextBlockStyle}"
-                            TextWrapping="Wrap"
+                    <!-- Navigation -->
+                    <controls:BackButtonControl ShowLabel="True" />
+
+                    <!-- Header -->
+                    <Grid ColumnSpacing="24">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="180" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <controls:ImagePlaceholderControl
+                            x:Name="HeaderCoverControl"
+                            Width="180"
+                            Height="180"
+                            FallbackGlyph="&#xE8D6;"
+                            IconSize="48"
+                            ImageCornerRadius="8"
                         />
-                        <TextBlock
-                            x:Name="HeaderSubtitle"
-                            Style="{StaticResource BodyTextBlockStyle}"
-                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                        />
-                        <StackPanel Orientation="Horizontal" Spacing="12">
-                            <controls:IconButtonControl
-                                x:Name="PlayAllButton"
-                                x:Uid="PlaylistHeader_PlayAll"
-                                Glyph="&#xE768;"
-                                IsAccent="True"
-                                Click="PlayAllButton_Click"
+                        <StackPanel
+                            Grid.Column="1"
+                            VerticalAlignment="Center"
+                            Spacing="8"
+                        >
+                            <TextBlock
+                                x:Name="HeaderTitle"
+                                Style="{StaticResource TitleTextBlockStyle}"
+                                TextWrapping="Wrap"
                             />
-                            <controls:IconButtonControl
-                                x:Name="ShufflePlayButton"
-                                x:Uid="PlaylistHeader_Shuffle"
-                                Glyph="&#xE8B1;"
-                                Click="ShufflePlayButton_Click"
+                            <TextBlock
+                                x:Name="HeaderSubtitle"
+                                Style="{StaticResource BodyTextBlockStyle}"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                             />
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <controls:IconButtonControl
+                                    x:Name="PlayAllButton"
+                                    x:Uid="PlaylistHeader_PlayAll"
+                                    Glyph="&#xE768;"
+                                    IsAccent="True"
+                                    Click="PlayAllButton_Click"
+                                />
+                                <controls:IconButtonControl
+                                    x:Name="ShufflePlayButton"
+                                    x:Uid="PlaylistHeader_Shuffle"
+                                    Glyph="&#xE8B1;"
+                                    Click="ShufflePlayButton_Click"
+                                />
+                            </StackPanel>
                         </StackPanel>
-                    </StackPanel>
-                </Grid>
+                    </Grid>
 
-                <!-- Column Headers -->
-                <controls:TrackListHeaderControl
-                    AlbumColumnWidth="0.6*"
-                    Margin="0,8,0,-16"
-                />
+                    <!-- Column Headers -->
+                    <controls:TrackListHeaderControl
+                        AlbumColumnWidth="0.6*"
+                        Margin="0,8,0,0"
+                    />
+                </StackPanel>
+            </ListView.Header>
 
-                <!-- Track list -->
-                <ListView
-                    x:Name="TracksList"
-                    SelectionMode="None"
-                    IsItemClickEnabled="True"
-                    ItemClick="TrackItem_Click"
-                    RightTapped="TrackItem_RightTapped"
-                >
-                    <ListView.ItemTemplate>
-                        <DataTemplate>
-                            <controls:TrackListItemControl
-                                ShowHeart="False"
-                                AlbumColumnWidth="0.6*"
-                            />
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
-                </ListView>
-
-            </StackPanel>
-        </ScrollViewer>
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <controls:TrackListItemControl
+                        ShowHeart="False"
+                        AlbumColumnWidth="0.6*"
+                    />
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
     </Grid>
 </Page>

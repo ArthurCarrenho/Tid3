@@ -1,9 +1,8 @@
 using System;
-using System.Collections.ObjectModel;
 using System.Linq;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Input;
+using TidalUi3.Helpers;
 using TidalUi3.Models;
 using TidalUi3.Services;
 
@@ -14,100 +13,100 @@ public sealed partial class QueuePanelControl : UserControl
     private readonly QueueService _queue;
     private readonly Microsoft.UI.Dispatching.DispatcherQueue _uiQueue;
 
-    // View models for lists
-    private readonly ObservableCollection<Track> _historyQueue = new();
-    private readonly ObservableCollection<Track> _currentQueue = new();
-    private readonly ObservableCollection<Track> _upcomingQueue = new();
-    
+    // Tracks plus section titles, see QueueRows.
+    private readonly BulkObservableCollection<object> _rows = [];
 
     public event EventHandler? CloseButtonClicked;
 
     public QueuePanelControl()
     {
         this.InitializeComponent();
-        
+
         _queue = App.Queue;
         _uiQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
-        
+
         _queue.CurrentTrackChanged += OnCurrentTrackChanged;
         _queue.Queue.CollectionChanged += OnQueueChanged;
-        
-        HistoryListView.ItemsSource = _historyQueue;
-        CurrentListView.ItemsSource = _currentQueue;
-        UpcomingListView.ItemsSource = _upcomingQueue;
+
+        QueueList.ItemsSource = _rows;
 
         Refresh();
     }
 
-    private void OnCurrentTrackChanged(Track? track)
-    {
-        _uiQueue.TryEnqueue(() => Refresh());
-    }
+    private void OnCurrentTrackChanged(Track? track) => ScheduleRefresh();
 
     private void OnQueueChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        => ScheduleRefresh();
+
+    // Adding a radio or an album raises one change per track; rebuilding the list for each
+    // of them is wasted work, so collapse a burst into a single refresh.
+    private bool _refreshPending;
+
+    private void ScheduleRefresh()
     {
-        _uiQueue.TryEnqueue(() => Refresh());
+        if (_refreshPending) return;
+        _refreshPending = true;
+        if (!_uiQueue.TryEnqueue(() =>
+            {
+                _refreshPending = false;
+                Refresh();
+            }))
+            _refreshPending = false;
     }
 
     public void Refresh()
     {
-        RefreshQueueTrackStates();
-        
-        if (_queue.Queue.Count == 0)
-        {
-            HistorySection.Visibility = Visibility.Collapsed;
-            CurrentSection.Visibility = Visibility.Collapsed;
-            UpcomingSection.Visibility = Visibility.Collapsed;
-            QueueScrollViewer.Visibility = Visibility.Collapsed;
-            
-            EmptyQueueMessage.Visibility = Visibility.Visible;
-            QueueClearButton.Visibility = Visibility.Collapsed;
-        }
-        else
-        {
-            QueueScrollViewer.Visibility = Visibility.Visible;
-            EmptyQueueMessage.Visibility = Visibility.Collapsed;
-            QueueClearButton.Visibility = Visibility.Visible;
-        }
+        UpdateTrackStates();
+        QueueRows.Sync(_rows, QueueRows.Build(_queue.Queue, _queue.CurrentIndex));
+
+        var isEmpty = _queue.Queue.Count == 0;
+        QueueList.Visibility = isEmpty ? Visibility.Collapsed : Visibility.Visible;
+        EmptyQueueMessage.Visibility = isEmpty ? Visibility.Visible : Visibility.Collapsed;
+        QueueClearButton.Visibility = isEmpty ? Visibility.Collapsed : Visibility.Visible;
     }
 
-    private void RefreshQueueTrackStates()
+    /// <summary>
+    /// Scrolls "Now playing" to the top. Meant for when the panel opens: deep into a long
+    /// queue the history above it is hundreds of rows. Not done on every refresh, so browsing
+    /// the queue isn't yanked back each time the track changes.
+    /// </summary>
+    public void ScrollToCurrent()
     {
-        _historyQueue.Clear();
-        _currentQueue.Clear();
-        _upcomingQueue.Clear();
+        if (!_rows.Contains(QueueSection.NowPlaying)) return;
 
-        for (int i = 0; i < _queue.Queue.Count; i++)
+        // The panel was usually collapsed until a moment ago; without a layout pass the list
+        // has no viewport yet and ignores the request.
+        QueueList.UpdateLayout();
+        QueueList.ScrollIntoView(QueueSection.NowPlaying, ScrollIntoViewAlignment.Leading);
+    }
+
+    private void UpdateTrackStates()
+    {
+        var current = _queue.CurrentIndex;
+        for (var i = 0; i < _queue.Queue.Count; i++)
         {
             var track = _queue.Queue[i];
-            track.IsPlaying = i == _queue.CurrentIndex;
-            track.IsPlayed = i < _queue.CurrentIndex;
-            track.IsFirstUpcoming = false;
-
-            if (track.IsPlayed)
-            {
-                _historyQueue.Add(track);
-            }
-            else if (track.IsPlaying)
-            {
-                _currentQueue.Add(track);
-            }
-            else
-            {
-                _upcomingQueue.Add(track);
-            }
+            track.IsPlaying = i == current;
+            track.IsPlayed = i < current;
         }
-        
-        HistorySection.Visibility = _historyQueue.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
-        CurrentSection.Visibility = _currentQueue.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
-        UpcomingSection.Visibility = _upcomingQueue.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    private void QueueClearButton_Click(object sender, RoutedEventArgs e)
+    // Containers are recycled between tracks and section titles, so set both ways each time.
+    private void QueueList_ContainerContentChanging(ListViewBase sender, ContainerContentChangingEventArgs args)
     {
-        _queue.Clear();
-        Refresh();
+        if (args.InRecycleQueue) return;
+
+        var isTitle = args.Item is QueueSection;
+        var container = args.ItemContainer;
+        container.IsHitTestVisible = !isTitle;
+        container.IsTabStop = !isTitle;
+        if (isTitle)
+            container.Padding = new Thickness(0);
+        else
+            container.ClearValue(Control.PaddingProperty);
     }
+
+    private void QueueClearButton_Click(object sender, RoutedEventArgs e) => _queue.Clear();
 
     private void QueueCloseButton_Click(object sender, RoutedEventArgs e)
     {
@@ -123,15 +122,20 @@ public sealed partial class QueuePanelControl : UserControl
         }
     }
 
+    // Only upcoming tracks can be reordered; history and the current track stay put.
+    private void QueueList_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
+    {
+        if (e.Items.Any(item => item is not Track { IsUpcoming: true }))
+            e.Cancel = true;
+    }
+
     private void QueueListView_DragItemsCompleted(ListViewBase sender, DragItemsCompletedEventArgs args)
     {
-        // Rebuild the global queue based on the new visual order of _upcomingQueue
-        var historyAndCurrent = _queue.Queue.Take(_queue.CurrentIndex + 1).ToList();
-        
-        _queue.Queue.Clear();
-        foreach (var track in historyAndCurrent) _queue.Queue.Add(track);
-        foreach (var track in _upcomingQueue) _queue.Queue.Add(track);
-        
+        // The ListView already moved the row in _rows. Read the upcoming tracks back in their
+        // new order (one dropped above "Now playing" just becomes the next track) and apply
+        // that through QueueService, which keeps the current index and shuffle bookkeeping
+        // intact. Refresh puts the rows back in line if the queue ignored it.
+        _queue.ReorderUpcoming(_rows.OfType<Track>().Where(t => t.IsUpcoming).ToList());
         Refresh();
     }
 

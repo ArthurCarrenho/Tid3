@@ -397,16 +397,8 @@ public class TidalManifest
 
 // ---------- Lyrics ----------
 
-public class TritonLyricsResponse
-{
-    [JsonPropertyName("version")]
-    public string Version { get; set; } = string.Empty;
-
-    [JsonPropertyName("lyrics")]
-    public TritonLyricsData? Lyrics { get; set; }
-}
-
-public class TritonLyricsData
+/// <summary>Response of TIDAL's tracks/{id}/lyrics: plain text and LRC-timed subtitles.</summary>
+public class TidalLyricsData
 {
     [JsonPropertyName("trackId")]
     public int TrackId { get; set; }
@@ -418,8 +410,41 @@ public class TritonLyricsData
     public string Subtitles { get; set; } = string.Empty;
 }
 
+/// <summary>A record from LRCLIB (lrclib.net), as /api/get and /api/search return it.</summary>
+public class LrcLibRecord
+{
+    [JsonPropertyName("trackName")]
+    public string TrackName { get; set; } = string.Empty;
+
+    [JsonPropertyName("artistName")]
+    public string ArtistName { get; set; } = string.Empty;
+
+    [JsonPropertyName("albumName")]
+    public string AlbumName { get; set; } = string.Empty;
+
+    /// <summary>Length in seconds.</summary>
+    [JsonPropertyName("duration")]
+    public double Duration { get; set; }
+
+    [JsonPropertyName("instrumental")]
+    public bool Instrumental { get; set; }
+
+    [JsonPropertyName("plainLyrics")]
+    public string? PlainLyrics { get; set; }
+
+    /// <summary>LRC text, one "[mm:ss.xx] line" per line.</summary>
+    [JsonPropertyName("syncedLyrics")]
+    public string? SyncedLyrics { get; set; }
+}
+
 public class TidalLyricsSubtitle
 {
+    /// <summary>
+    /// <see cref="StartTimeMs"/> value for a line that carries no timing, used when a
+    /// track only has plain lyrics. Such lines are displayed but never highlighted or seeked to.
+    /// </summary>
+    public const int Unsynced = -1;
+
     [JsonPropertyName("startTimeMs")]
     public int StartTimeMs { get; set; }
 

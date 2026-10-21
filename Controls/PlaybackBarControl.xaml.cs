@@ -14,7 +14,14 @@ namespace TidalUi3.Controls
         private readonly PlaybackService _playback = App.Playback;
         private readonly Microsoft.UI.Dispatching.DispatcherQueue _uiQueue;
         private readonly Windows.ApplicationModel.Resources.ResourceLoader _rl = new();
-        private bool _isLiked;
+
+        // Incremented per cover request so stale loads can tell they were superseded.
+        private int _coverRequestId;
+
+        // True between pressing and releasing the progress slider, so the position timer
+        // doesn't drag the thumb back while the user is moving it.
+        private bool _isDraggingProgress;
+        private double _volumeBeforeMute = 0.75;
 
         public event EventHandler? QueueButtonClicked;
         public event EventHandler? LyricsButtonClicked;
@@ -23,11 +30,19 @@ namespace TidalUi3.Controls
         {
             this.InitializeComponent();
             _uiQueue = DispatcherQueue;
+
+            // Slider marks pointer events as handled internally, so handlers attached in XAML
+            // never run. handledEventsToo is the only way to see the user's drag.
+            ProgressSlider.AddHandler(PointerPressedEvent, new PointerEventHandler(ProgressSlider_PointerPressed), true);
+            ProgressSlider.AddHandler(PointerReleasedEvent, new PointerEventHandler(ProgressSlider_PointerReleased), true);
+            ProgressSlider.AddHandler(PointerCaptureLostEvent, new PointerEventHandler(ProgressSlider_PointerReleased), true);
         }
 
         private void UserControl_Loaded(object sender, RoutedEventArgs e)
         {
             _queue.CurrentTrackChanged += OnCurrentTrackChanged;
+            _queue.ModesChanged += OnQueueModesChanged;
+            FavoritesService.Changed += UpdateLikeVisual;
             _playback.PositionChanged += OnPositionChanged;
             _playback.PlaybackEnded += OnPlaybackEnded;
             _playback.PlaybackStarted += OnPlaybackStarted;
@@ -133,13 +148,16 @@ namespace TidalUi3.Controls
             TransportControls.RepeatMode = (Controls.RepeatMode)(int)_queue.Repeat;
         }
 
-
+        // Shuffle/repeat also change from the pages' shuffle buttons, session restore and sync.
+        private void OnQueueModesChanged() => _uiQueue.TryEnqueue(UpdateTransportState);
 
         private void OnVolumeChanged(double volume) => _uiQueue.TryEnqueue(() => VolumeControl.Volume = volume * 100);
 
         private void UserControl_Unloaded(object sender, RoutedEventArgs e)
         {
             _queue.CurrentTrackChanged -= OnCurrentTrackChanged;
+            _queue.ModesChanged -= OnQueueModesChanged;
+            FavoritesService.Changed -= UpdateLikeVisual;
             _playback.PositionChanged -= OnPositionChanged;
             _playback.PlaybackEnded -= OnPlaybackEnded;
             _playback.PlaybackStarted -= OnPlaybackStarted;
@@ -181,24 +199,6 @@ namespace TidalUi3.Controls
             UpdateQualityUI(_playback.CurrentQuality);
         }
 
-        public void SetPlayingState(bool isPlaying)
-        {
-            _uiQueue.TryEnqueue(() => TransportControls.IsPlaying = isPlaying);
-        }
-
-        public void UpdatePositionManually(TimeSpan position, TimeSpan duration)
-        {
-            _uiQueue.TryEnqueue(() =>
-            {
-                CurrentTimeText.Text = FormatTime(position);
-                if (duration.TotalSeconds > 0)
-                {
-                    TotalTimeText.Text = FormatTime(duration);
-                    ProgressSlider.Value = position.TotalSeconds / duration.TotalSeconds * 100;
-                }
-            });
-        }
-
         private void OnPlaybackStarted() => _uiQueue.TryEnqueue(() => TransportControls.IsPlaying = true);
         private void OnPlaybackPaused() => _uiQueue.TryEnqueue(() => TransportControls.IsPlaying = false);
 
@@ -231,6 +231,7 @@ namespace TidalUi3.Controls
         {
             _uiQueue.TryEnqueue(() =>
             {
+                if (_isDraggingProgress) return;
                 CurrentTimeText.Text = FormatTime(position);
                 if (duration.TotalSeconds > 0)
                 {
@@ -256,6 +257,11 @@ namespace TidalUi3.Controls
 
         private async void UpdateNowPlaying(Track? track)
         {
+            // Covers resolve at very different speeds (cache hit vs fresh download), so a
+            // request for a track that was skipped past can complete after a newer one and
+            // overwrite it. Stamp each request and only let the newest one paint.
+            var requestId = ++_coverRequestId;
+
             if (track is null)
             {
                 NowPlayingPanel.Visibility = Visibility.Collapsed;
@@ -275,11 +281,15 @@ namespace TidalUi3.Controls
             NowPlayingArtist.Text = track.Artist;
             TotalTimeText.Text = track.Duration;
 
-            _isLiked = track.IsLiked;
             UpdateLikeVisual();
 
-            NowPlayingCover.Source = !string.IsNullOrEmpty(track.CoverUrl)
+            var cover = !string.IsNullOrEmpty(track.CoverUrl)
                 ? await ImageCacheService.GetImageAsync(track.CoverUrl) : null;
+
+            // A newer track took over while this cover was loading; its art owns the bar.
+            if (requestId != _coverRequestId) return;
+
+            NowPlayingCover.Source = cover;
         }
 
         private void TransportControls_PlayPauseClick(object sender, RoutedEventArgs e)
@@ -288,14 +298,11 @@ namespace TidalUi3.Controls
             _playback.TogglePlayPause();
         }
 
-        private void TransportControls_PreviousClick(object sender, RoutedEventArgs e) => _queue.Previous();
+        private void TransportControls_PreviousClick(object sender, RoutedEventArgs e) => _playback.SkipPrevious();
         private void TransportControls_NextClick(object sender, RoutedEventArgs e) => _queue.Next();
 
-        private void TransportControls_ShuffleClick(object sender, RoutedEventArgs e)
-        {
-            _queue.Shuffle = !_queue.Shuffle;
-            TransportControls.IsShuffled = _queue.Shuffle;
-        }
+        // The button icons follow through ModesChanged.
+        private void TransportControls_ShuffleClick(object sender, RoutedEventArgs e) => _queue.SetShuffle(!_queue.Shuffle);
 
         private void TransportControls_RepeatClick(object sender, RoutedEventArgs e)
         {
@@ -305,27 +312,50 @@ namespace TidalUi3.Controls
                 global::TidalUi3.Services.RepeatMode.All => global::TidalUi3.Services.RepeatMode.One,
                 _ => global::TidalUi3.Services.RepeatMode.Off
             };
-
-            TransportControls.RepeatMode = (Controls.RepeatMode)(int)_queue.Repeat;
         }
 
-        private void ProgressSlider_PointerPressed(object sender, PointerRoutedEventArgs e) => _playback.BeginSeek();
-        private void ProgressSlider_PointerReleased(object sender, PointerRoutedEventArgs e) => _playback.EndSeek(ProgressSlider.Value);
+        private void ProgressSlider_PointerPressed(object sender, PointerRoutedEventArgs e)
+        {
+            _isDraggingProgress = true;
+            _playback.BeginSeek();
+        }
+
+        // Wired to both release and capture-lost, which usually both fire for one drag.
+        private void ProgressSlider_PointerReleased(object sender, PointerRoutedEventArgs e)
+        {
+            if (!_isDraggingProgress) return;
+            _isDraggingProgress = false;
+            _playback.EndSeek(ProgressSlider.Value);
+        }
+
         private void VolumeControl_VolumeChanged(object sender, RoutedEventArgs e) => _playback.Volume = VolumeControl.Volume / 100.0;
 
-        private void LikeButton_Click(object sender, RoutedEventArgs e)
+        private void VolumeControl_MuteClick(object sender, RoutedEventArgs e)
         {
-            if (!_queue.HasTrack) return;
-            _isLiked = !_isLiked;
-            UpdateLikeVisual();
-            if (_queue.CurrentTrack is not null)
-                _queue.CurrentTrack.IsLiked = _isLiked;
+            if (_playback.Volume > 0)
+            {
+                _volumeBeforeMute = _playback.Volume;
+                _playback.Volume = 0;
+            }
+            else
+            {
+                _playback.Volume = _volumeBeforeMute > 0 ? _volumeBeforeMute : 0.75;
+            }
+        }
+
+        private async void LikeButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_queue.CurrentTrack is not { } track) return;
+            // FavoritesService flips the state right away and raises Changed, which repaints
+            // the heart; a failed request flips it back the same way.
+            await FavoritesService.SetTrackLikedAsync(track, !FavoritesService.IsTrackLiked(track.Id));
         }
 
         private void UpdateLikeVisual()
         {
-            LikeIcon.Glyph = _isLiked ? Glyphs.LikeFilled : Glyphs.Like;
-            LikeIcon.Foreground = _isLiked
+            var isLiked = _queue.CurrentTrack is { } track && FavoritesService.IsTrackLiked(track.Id);
+            LikeIcon.Glyph = isLiked ? Glyphs.LikeFilled : Glyphs.Like;
+            LikeIcon.Foreground = isLiked
                 ? new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(255, 233, 30, 99))
                 : (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
         }
@@ -340,19 +370,19 @@ namespace TidalUi3.Controls
             var flyout = new Flyout { Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.Top };
             var panel = new StackPanel { Spacing = 8, Padding = new Thickness(8), MaxWidth = 300 };
 
-            panel.Children.Add(new TextBlock { Text = "Stream Info", Style = (Style)Application.Current.Resources["SubtitleTextBlockStyle"], Margin = new Thickness(0, 0, 0, 4) });
-            panel.Children.Add(new TextBlock { Text = $"Quality: {_playback.CurrentPlaybackInfo?.AudioQuality ?? _playback.CurrentQuality}", FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
+            panel.Children.Add(new TextBlock { Text = Loc.Get("StreamInfo_Title"), Style = (Style)Application.Current.Resources["SubtitleTextBlockStyle"], Margin = new Thickness(0, 0, 0, 4) });
+            panel.Children.Add(new TextBlock { Text = Loc.Format("StreamInfo_Quality", _playback.CurrentPlaybackInfo?.AudioQuality ?? _playback.CurrentQuality), FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
 
             var codec = _playback.CurrentManifest?.Codecs ?? _playback.CurrentPlaybackInfo?.AudioMode ?? "";
             if (!string.IsNullOrEmpty(codec))
-                panel.Children.Add(new TextBlock { Text = $"Codec: {codec}", Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"] });
+                panel.Children.Add(new TextBlock { Text = Loc.Format("StreamInfo_Codec", codec), Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"] });
 
             var mime = _playback.CurrentManifest?.MimeType ?? _playback.CurrentPlaybackInfo?.ManifestMimeType ?? "";
             if (!string.IsNullOrEmpty(mime))
-                panel.Children.Add(new TextBlock { Text = $"Type: {mime}", Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"] });
+                panel.Children.Add(new TextBlock { Text = Loc.Format("StreamInfo_Type", mime), Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"] });
 
             if (_playback.CurrentPlaybackInfo?.AssetPresentation is { Length: > 0 } presentation)
-                panel.Children.Add(new TextBlock { Text = $"Format: {presentation}", Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"] });
+                panel.Children.Add(new TextBlock { Text = Loc.Format("StreamInfo_Format", presentation), Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"] });
 
             flyout.Content = panel;
             flyout.ShowAt((FrameworkElement)sender);

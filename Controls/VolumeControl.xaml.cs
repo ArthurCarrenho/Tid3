@@ -82,7 +82,7 @@ namespace TidalUi3.Controls
             MuteClick?.Invoke(this, e);
         }
 
-        private void VolumeSlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs? e)
+        private void VolumeSlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
         {
             Volume = e.NewValue;
             UpdateVolumeIcon();

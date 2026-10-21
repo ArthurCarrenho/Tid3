@@ -6,6 +6,8 @@
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
   xmlns:uap5="http://schemas.microsoft.com/appx/manifest/uap/windows10/5"
+  xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
+  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
   IgnorableNamespaces="uap rescap uap5">
 
   <Identity
@@ -47,6 +49,23 @@
         <uap5:Extension Category="windows.startupTask">
           <uap5:StartupTask TaskId="Tid3Startup" Enabled="false" DisplayName="Tid3" />
         </uap5:Extension>
+
+        <!--
+          Windows App SDK app notifications require a packaged app to declare its COM
+          activator here. Without it AppNotificationManager.Register() fails with
+          "No COM servers are registered for this app" and every toast is dropped.
+        -->
+        <com:Extension Category="windows.comServer">
+          <com:ComServer>
+            <com:ExeServer Executable="TidalUi3.exe" DisplayName="Tid3" Arguments="----AppNotificationActivated:">
+              <com:Class Id="68415043-3F17-4CBD-9E38-F9F3B58035E0" />
+            </com:ExeServer>
+          </com:ComServer>
+        </com:Extension>
+
+        <desktop:Extension Category="windows.toastNotificationActivation">
+          <desktop:ToastNotificationActivation ToastActivatorCLSID="68415043-3F17-4CBD-9E38-F9F3B58035E0" />
+        </desktop:Extension>
       </Extensions>
     </Application>
   </Applications>

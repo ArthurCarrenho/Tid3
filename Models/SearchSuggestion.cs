@@ -15,6 +15,7 @@ public class SearchSuggestion
     public int Id { get; set; }                             // Album or Artist ID
     public int TrackId { get; set; }                        // Track ID
     public int ArtistId { get; set; }                       // NEW: Artist ID for navigation
+    public string ArtistName { get; set; } = string.Empty;  // Track/album artist, kept apart from the localized Subtitle
 
     public string Name { get; set; } = string.Empty;        // Name for navigation
     public bool IsRichResult { get; set; }                  // true = show cover art row, false = text-only row

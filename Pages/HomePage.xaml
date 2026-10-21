@@ -75,6 +75,22 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
+                <!-- Shown instead of an empty page when loading failed, e.g. offline -->
+                <StackPanel
+                    x:Name="LoadErrorPanel"
+                    Visibility="Collapsed"
+                    Spacing="16"
+                    Margin="0,48,0,0"
+                    HorizontalAlignment="Center"
+                >
+                    <controls:EmptyStateControl x:Uid="HomeLoadError" IconGlyph="&#xE7BA;" />
+                    <Button
+                        x:Uid="HomeLoadError_Retry"
+                        HorizontalAlignment="Center"
+                        Click="RetryButton_Click"
+                    />
+                </StackPanel>
+
             </StackPanel>
         </ScrollViewer>
     </Grid>

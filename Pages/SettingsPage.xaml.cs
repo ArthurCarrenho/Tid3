@@ -264,7 +264,7 @@ public sealed partial class SettingsPage : Page
             var (success, error) = await sync.ConnectAsync();
             if (!success)
             {
-                SyncErrorInfoBar.Message = error ?? "Unknown error";
+                SyncErrorInfoBar.Message = error ?? _rl.GetString("Common_UnknownError");
                 SyncErrorInfoBar.IsOpen = true;
             }
         }
@@ -460,10 +460,9 @@ public sealed partial class SettingsPage : Page
             UserEmailText.Text = user.Email;
             UserIdText.Text = $"ID {user.UserId}";
 
+            // SetToken would also have wiped the refresh token; SetUser only fills in the id.
             if (App.ApiClient.UserId == 0 && user.UserId != 0)
-            {
-                App.ApiClient.SetToken(App.ApiClient.AccessToken!, null, user.UserId, App.ApiClient.CountryCode);
-            }
+                App.ApiClient.SetUser(user.UserId, user.CountryCode);
 
             UserCountryText.Text = user.CountryCode;
 
@@ -500,10 +499,13 @@ public sealed partial class SettingsPage : Page
 
     // ── Account Actions ────────────────────────────────────────
 
-    private void LogoutButton_Click(object sender, RoutedEventArgs e)
+    private async void LogoutButton_Click(object sender, RoutedEventArgs e)
     {
+        App.ApiClient.SignOut();
         TokenStorageService.Clear();
         App.Queue.Clear();
+        // Otherwise the next account to sign in would get this one's queue back.
+        await SessionStorageService.ClearAsync();
         Microsoft.Windows.AppLifecycle.AppInstance.Restart("");
     }
 

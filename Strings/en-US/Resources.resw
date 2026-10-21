@@ -240,4 +240,38 @@
   <data name="PlaybackBar_Devices_SyncDisconnected" xml:space="preserve">
     <value>Sync disconnected</value>
   </data>
+  <data name="Playback_TrackSkipped" xml:space="preserve">
+    <value>Couldn't play “{0}”, so it was skipped.</value>
+  </data>
+  <data name="Playback_TrackFailed" xml:space="preserve">
+    <value>Couldn't play “{0}”.</value>
+  </data>
+  <data name="Playback_RepeatedFailures" xml:space="preserve">
+    <value>Several tracks in a row couldn't be played, so playback stopped. Check your connection and press play to try again.</value>
+  </data>
+  <data name="Menu_Play" xml:space="preserve"><value>Play</value></data>
+  <data name="Menu_PlayNext" xml:space="preserve"><value>Play next</value></data>
+  <data name="Menu_AddToQueue" xml:space="preserve"><value>Add to queue</value></data>
+  <data name="Menu_Like" xml:space="preserve"><value>Add to liked songs</value></data>
+  <data name="Menu_Unlike" xml:space="preserve"><value>Remove from liked songs</value></data>
+  <data name="Menu_GoToAlbum" xml:space="preserve"><value>Go to album</value></data>
+  <data name="Menu_GoToArtist" xml:space="preserve"><value>Go to artist</value></data>
+  <data name="Menu_GoToRadio" xml:space="preserve"><value>Go to track radio</value></data>
+  <data name="Menu_OpenMix" xml:space="preserve"><value>Open mix</value></data>
+  <data name="Menu_OpenAlbum" xml:space="preserve"><value>Open album</value></data>
+  <data name="Menu_GoTo" xml:space="preserve"><value>Go to {0}</value></data>
+  <data name="Search_SuggestionTrack" xml:space="preserve"><value>Song · {0}</value></data>
+  <data name="Search_SuggestionAlbum" xml:space="preserve"><value>Album · {0}</value></data>
+  <data name="Search_SuggestionArtist" xml:space="preserve"><value>Artist</value></data>
+  <data name="Sidebar_Playlists" xml:space="preserve"><value>Playlists</value></data>
+  <data name="StreamInfo_Title" xml:space="preserve"><value>Stream info</value></data>
+  <data name="StreamInfo_Quality" xml:space="preserve"><value>Quality: {0}</value></data>
+  <data name="StreamInfo_Codec" xml:space="preserve"><value>Codec: {0}</value></data>
+  <data name="StreamInfo_Type" xml:space="preserve"><value>Type: {0}</value></data>
+  <data name="StreamInfo_Format" xml:space="preserve"><value>Format: {0}</value></data>
+  <data name="Common_UnknownError" xml:space="preserve"><value>Unknown error</value></data>
+  <data name="HomeLoadError.Title" xml:space="preserve"><value>Couldn't load your home page</value></data>
+  <data name="HomeLoadError.Description" xml:space="preserve"><value>Check your connection and try again.</value></data>
+  <data name="HomeLoadError_Retry.Content" xml:space="preserve"><value>Try again</value></data>
+  <data name="Lyrics_Instrumental" xml:space="preserve"><value>Instrumental track, no lyrics</value></data>
 </root>

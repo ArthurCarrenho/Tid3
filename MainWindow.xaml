@@ -56,7 +56,6 @@
                             BackClick="PageHeader_BackClick"
                             ForwardClick="PageHeader_ForwardClick"
                             SearchSubmitted="PageHeader_SearchSubmitted"
-                            SuggestionChosen="PageHeader_SuggestionChosen"
                         />
                     </NavigationView.Header>
 
@@ -93,6 +92,17 @@
                     Grid.Column="1"
                     Visibility="Collapsed"
                     CloseButtonClicked="LyricsCloseButton_Click"
+                />
+
+                <!-- Playback problems, e.g. a track that couldn't be played and was skipped -->
+                <InfoBar
+                    x:Name="PlaybackInfoBar"
+                    Severity="Warning"
+                    IsClosable="True"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Bottom"
+                    MaxWidth="560"
+                    Margin="16"
                 />
 
             </Grid>  <!-- End content area -->

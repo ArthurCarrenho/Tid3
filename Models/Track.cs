@@ -8,9 +8,23 @@ public class Track : INotifyPropertyChanged
     private bool _isPlaying;
     private bool _isPlayed;
     private bool _isFirstUpcoming;
+    private int _rowNumber;
 
     public int Id { get; set; }
-    public int RowNumber { get; set; }
+
+    // Notifies so a list can renumber in place, e.g. liked songs after one is added or removed.
+    public int RowNumber
+    {
+        get => _rowNumber;
+        set
+        {
+            if (_rowNumber != value)
+            {
+                _rowNumber = value;
+                OnPropertyChanged();
+            }
+        }
+    }
     public string Title { get; set; } = string.Empty;
     public string Artist { get; set; } = string.Empty;
     public string Album { get; set; } = string.Empty;
@@ -49,6 +63,7 @@ public class Track : INotifyPropertyChanged
             {
                 _isPlaying = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(IsUpcoming));
             }
         }
     }

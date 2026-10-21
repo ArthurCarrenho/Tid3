@@ -55,7 +55,7 @@ public static class TrackContextMenu
                 {
                     Id = s.TrackId,
                     Title = s.Name,
-                    Artist = s.Subtitle?.Replace("Song · ", "") ?? "",
+                    Artist = s.ArtistName,
                     CoverUrl = s.CoverUrl,
                     IsExplicit = s.IsExplicit,
                     AlbumId = s.Id,         // We mapped Album ID to the base Id property
@@ -65,11 +65,11 @@ public static class TrackContextMenu
                 break;
 
             case "album":
-                menu.Items.Add(CreateMenuItem("Go to album", Glyphs.Album, new RelayCommand(() => navigate(typeof(PlaylistDetailPage), s.Id))));
+                menu.Items.Add(CreateMenuItem(Loc.Get("Menu_GoToAlbum"), Glyphs.Album, new RelayCommand(() => navigate(typeof(PlaylistDetailPage), s.Id))));
                 break;
 
             case "artist":
-                menu.Items.Add(CreateMenuItem("Go to artist", Glyphs.Artist, new RelayCommand(() => navigate(typeof(ArtistPage), s.Id))));
+                menu.Items.Add(CreateMenuItem(Loc.Get("Menu_GoToArtist"), Glyphs.Artist, new RelayCommand(() => navigate(typeof(ArtistPage), s.Id))));
                 break;
         }
     }
@@ -80,21 +80,30 @@ public static class TrackContextMenu
     private static void PopulateForTrack(MenuFlyout menu, Track track, QueueService queue, Action<Type, object> navigate)
     {
         // Playback Actions
-        menu.Items.Add(CreateMenuItem("Play", Glyphs.Play, new RelayCommand(() => queue.PlayTrack(track))));
-        menu.Items.Add(CreateMenuItem("Play next", Glyphs.Next, new RelayCommand(() => queue.PlayNext(track))));
-        menu.Items.Add(CreateMenuItem("Add to queue", Glyphs.Queue, new RelayCommand(() => queue.AddToQueue(track))));
+        menu.Items.Add(CreateMenuItem(Loc.Get("Menu_Play"), Glyphs.Play, new RelayCommand(() => queue.PlayTrack(track))));
+        menu.Items.Add(CreateMenuItem(Loc.Get("Menu_PlayNext"), Glyphs.Next, new RelayCommand(() => queue.PlayNext(track))));
+        menu.Items.Add(CreateMenuItem(Loc.Get("Menu_AddToQueue"), Glyphs.Queue, new RelayCommand(() => queue.AddToQueue(track))));
+
+        if (track.Id > 0)
+        {
+            var isLiked = FavoritesService.IsTrackLiked(track);
+            menu.Items.Add(CreateMenuItem(
+                Loc.Get(isLiked ? "Menu_Unlike" : "Menu_Like"),
+                isLiked ? Glyphs.LikeFilled : Glyphs.Like,
+                new RelayCommand(() => _ = FavoritesService.SetTrackLikedAsync(track, !isLiked))));
+        }
 
         menu.Items.Add(new MenuFlyoutSeparator());
 
         // Navigation Actions
         if (track.AlbumId > 0)
-            menu.Items.Add(CreateMenuItem("Go to album", Glyphs.Album, new RelayCommand(() => navigate(typeof(PlaylistDetailPage), track.AlbumId))));
+            menu.Items.Add(CreateMenuItem(Loc.Get("Menu_GoToAlbum"), Glyphs.Album, new RelayCommand(() => navigate(typeof(PlaylistDetailPage), track.AlbumId))));
 
         if (track.ArtistId > 0)
-            menu.Items.Add(CreateMenuItem("Go to artist", Glyphs.Artist, new RelayCommand(() => navigate(typeof(ArtistPage), track.ArtistId))));
+            menu.Items.Add(CreateMenuItem(Loc.Get("Menu_GoToArtist"), Glyphs.Artist, new RelayCommand(() => navigate(typeof(ArtistPage), track.ArtistId))));
 
         if (track.Id > 0)
-            menu.Items.Add(CreateMenuItem("Go to track radio", Glyphs.Radio, new RelayCommand(() => navigate(typeof(PlaylistDetailPage), $"radio:{track.Id}"))));
+            menu.Items.Add(CreateMenuItem(Loc.Get("Menu_GoToRadio"), Glyphs.Radio, new RelayCommand(() => navigate(typeof(PlaylistDetailPage), $"radio:{track.Id}"))));
     }
 
     /// <summary>

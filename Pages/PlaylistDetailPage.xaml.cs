@@ -4,8 +4,8 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Navigation;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using TidalUi3.Models;
 using TidalUi3.Services;
@@ -19,12 +19,16 @@ public sealed partial class PlaylistDetailPage : Page
     private readonly TidalApiClient _api = App.ApiClient;
     private readonly QueueService _queue = App.Queue;
     private readonly ResourceLoader _resourceLoader = new();
-    private List<Track>? _tracks;
+    private readonly BulkObservableCollection<Track> _tracks = [];
+    private readonly LoadingTrackListPlayer _player;
+    private readonly CancellationTokenSource _loadCts = new();
     private PageLoader? _pageLoader;
 
     public PlaylistDetailPage()
     {
         InitializeComponent();
+        _player = new(_queue);
+        TracksList.ItemsSource = _tracks;
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -47,47 +51,90 @@ public sealed partial class PlaylistDetailPage : Page
         }
     }
 
+    // Pages aren't cached, so this instance is never shown again: stop fetching the rest
+    // of a long playlist.
+    protected override void OnNavigatedFrom(NavigationEventArgs e)
+    {
+        base.OnNavigatedFrom(e);
+        _loadCts.Cancel();
+    }
+
     private void OnLoadError(string message) => HeaderTitle.Text = message;
 
     private async void LoadPlaylist(string uuid)
     {
+        var ct = _loadCts.Token;
+        IAsyncEnumerator<List<TidalTrackItem>>? pages = null;
+        var gotFirstPage = false;
+
         await _pageLoader!.LoadAsync(async () =>
         {
-            var isMix = uuid.Length != 36;
-            var playlist = isMix
-                ? await _api.GetMixAsPlaylistAsync(uuid)
-                : await _api.GetPlaylistAsync(uuid);
+            if (uuid.Length != 36)
+            {
+                LoadMix(await _api.GetMixAsync(uuid));
+                return;
+            }
 
+            var playlist = await _api.GetPlaylistAsync(uuid);
             SetHeader(playlist.Title,
-                isMix ? (playlist.Description ?? _resourceLoader.GetString("PlaylistDetail_Mix")) : string.Format(_resourceLoader.GetString("PlaylistDetail_Tracks"), playlist.NumberOfTracks),
+                string.Format(_resourceLoader.GetString("PlaylistDetail_Tracks"), playlist.NumberOfTracks),
                 TidalApiClient.GetImageUrl(playlist.SquareImage ?? playlist.Image, 320, 320));
 
-            _tracks = isMix
-                ? await LoadMixTracksAsync(uuid)
-                : await LoadPlaylistTracksAsync(uuid);
-
-            TracksList.ItemsSource = new ObservableCollection<Track>(_tracks);
+            // Only the first page waits behind the loading overlay. A playlist with thousands
+            // of tracks takes dozens of requests, and the rest streams in below while the
+            // first tracks can already be seen and played.
+            _player.BeginLoading();
+            pages = _api.GetPlaylistTrackPagesAsync(uuid, ct).GetAsyncEnumerator();
+            gotFirstPage = await pages.MoveNextAsync();
+            if (gotFirstPage)
+                AddTracks(pages.Current);
         }, _resourceLoader.GetString("PlaylistDetail_LoadError_Playlist"));
+
+        if (pages is null)
+            return;
+
+        try
+        {
+            while (gotFirstPage && await pages.MoveNextAsync())
+                _player.OnPageLoaded(AddTracks(pages.Current));
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            // Keep the tracks that did arrive rather than replacing the page with an error.
+            System.Diagnostics.Debug.WriteLine($"PlaylistDetailPage: loading more tracks failed: {ex}");
+        }
+        finally
+        {
+            _player.Complete();
+            await pages.DisposeAsync();
+        }
     }
 
-    private async Task<List<Track>> LoadMixTracksAsync(string uuid)
+    private List<Track> AddTracks(IEnumerable<TidalTrackItem> items)
     {
-        var result = await _api.GetMixTracksAsync(uuid, limit: 50);
-        var index = 1;
-        return result.Items
-            .Where(i => i.Item is not null)
-            .Select(i => TrackMapper.Map(i.Item!, index++))
-            .ToList();
+        var added = new List<Track>();
+        foreach (var item in items)
+        {
+            if (item.Item is null) continue;
+            var track = TrackMapper.Map(item.Item, _tracks.Count + 1);
+            _tracks.Add(track);
+            added.Add(track);
+        }
+        return added;
     }
 
-    private async Task<List<Track>> LoadPlaylistTracksAsync(string uuid)
+    private void LoadMix((TidalPlaylist Info, List<TidalTrackItem> Tracks) mix)
     {
-        var result = await _api.GetPlaylistTracksAsync(uuid, limit: 100);
+        SetHeader(mix.Info.Title,
+            string.IsNullOrEmpty(mix.Info.Description) ? _resourceLoader.GetString("PlaylistDetail_Mix") : mix.Info.Description,
+            TidalApiClient.GetImageUrl(mix.Info.SquareImage ?? mix.Info.Image, 320, 320));
+
         var index = 1;
-        return result.Items
+        _tracks.ReplaceAll(mix.Tracks
             .Where(i => i.Item is not null)
             .Select(i => TrackMapper.Map(i.Item!, index++))
-            .ToList();
+            .ToList());
     }
 
     private async void LoadAlbum(int albumId)
@@ -99,9 +146,7 @@ public sealed partial class PlaylistDetailPage : Page
             var coverUrl = TidalApiClient.GetImageUrl(album.Cover, 320, 320);
 
             SetHeader(album.Title, subtitle, coverUrl);
-            _tracks = await LoadAlbumTracksAsync(album, coverUrl);
-
-            TracksList.ItemsSource = new ObservableCollection<Track>(_tracks);
+            _tracks.ReplaceAll(await LoadAlbumTracksAsync(album, coverUrl));
         }, _resourceLoader.GetString("PlaylistDetail_LoadError_Album"));
     }
 
@@ -150,8 +195,7 @@ public sealed partial class PlaylistDetailPage : Page
                 track.Artist?.Name ?? _resourceLoader.GetString("PlaylistDetail_VariousArtists"),
                 coverUrl);
 
-            _tracks = await LoadRadioTracksAsync(trackId);
-            TracksList.ItemsSource = new ObservableCollection<Track>(_tracks);
+            _tracks.ReplaceAll(await LoadRadioTracksAsync(trackId));
         }, _resourceLoader.GetString("PlaylistDetail_LoadError_Radio"));
     }
 
@@ -175,25 +219,22 @@ public sealed partial class PlaylistDetailPage : Page
 
     private void PlayAllButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_tracks is { Count: > 0 })
-            _queue.PlayTracks(_tracks, 0);
+        if (_tracks.Count > 0)
+            _player.Play(_tracks, 0);
     }
 
     private void ShufflePlayButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_tracks is { Count: > 0 })
-        {
-            _queue.Shuffle = true;
-            _queue.PlayTracks(_tracks, 0);
-        }
+        if (_tracks.Count > 0)
+            _player.PlayShuffled(_tracks);
     }
 
     private void TrackItem_Click(object sender, ItemClickEventArgs e)
     {
-        if (e.ClickedItem is Track track && _tracks is not null)
+        if (e.ClickedItem is Track track)
         {
             var idx = _tracks.IndexOf(track);
-            _queue.PlayTracks(_tracks, idx >= 0 ? idx : 0);
+            _player.Play(_tracks, idx >= 0 ? idx : 0);
         }
     }
 

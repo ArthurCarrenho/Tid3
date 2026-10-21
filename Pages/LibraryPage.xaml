@@ -11,156 +11,157 @@
 
     <Grid>
         <controls:LoadingOverlayControl x:Name="LibraryLoading" />
-        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,16,0">
-            <StackPanel Spacing="32" Padding="36,24,36,120">
 
-                <!-- Header -->
-                <TextBlock
-                    x:Uid="LibraryHeader"
-                    Style="{StaticResource TitleLargeTextBlockStyle}"
-                    Margin="0,0,0,-16"
-                />
+        <!-- Liked songs can run into the thousands, so the page scrolls through the ListView
+             (which only creates the visible rows) and the other sections sit in its header. -->
+        <ListView
+            x:Name="LikedSongsList"
+            Padding="36,24,52,120"
+            SelectionMode="None"
+            IsItemClickEnabled="True"
+            ItemClick="TrackItem_Click"
+            RightTapped="TrackItem_RightTapped"
+        >
+            <ListView.Header>
+                <StackPanel Spacing="32" Margin="0,0,0,4">
 
-                <!-- Your Playlists -->
-                <StackPanel
-                    x:Name="PlaylistsSection"
-                    Spacing="12"
-                    Visibility="Collapsed"
-                >
+                    <!-- Header -->
                     <TextBlock
-                        x:Uid="LibraryPlaylists_Title"
-                        Style="{StaticResource SubtitleTextBlockStyle}"
+                        x:Uid="LibraryHeader"
+                        Style="{StaticResource TitleLargeTextBlockStyle}"
+                        Margin="0,0,0,-16"
                     />
-                    <ScrollViewer
-                        HorizontalScrollBarVisibility="Auto"
-                        VerticalScrollBarVisibility="Disabled"
-                        HorizontalScrollMode="Enabled"
-                        VerticalScrollMode="Disabled"
+
+                    <!-- Your Playlists -->
+                    <StackPanel
+                        x:Name="PlaylistsSection"
+                        Spacing="12"
+                        Visibility="Collapsed"
                     >
-                        <GridView
-                            x:Name="UserPlaylistsGrid"
-                            SelectionMode="None"
-                            IsItemClickEnabled="True"
-                            ItemClick="PlaylistItem_Click"
-                            ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                            ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                        <TextBlock
+                            x:Uid="LibraryPlaylists_Title"
+                            Style="{StaticResource SubtitleTextBlockStyle}"
+                        />
+                        <ScrollViewer
+                            HorizontalScrollBarVisibility="Auto"
+                            VerticalScrollBarVisibility="Disabled"
+                            HorizontalScrollMode="Enabled"
+                            VerticalScrollMode="Disabled"
                         >
-                            <GridView.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <ItemsStackPanel Orientation="Horizontal" />
-                                </ItemsPanelTemplate>
-                            </GridView.ItemsPanel>
-                            <GridView.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid
-                                        Width="240"
-                                        Height="88"
-                                        Margin="0,0,8,0"
-                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                        CornerRadius="8"
-                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                        BorderThickness="1"
-                                    >
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="88" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <controls:ImagePlaceholderControl
-                                            ImageSource="{Binding CoverUrl}"
-                                            FallbackGlyph="&#xE8D6;"
-                                            IconSize="28"
-                                            ImageCornerRadius="8,0,0,8"
-                                        />
-                                        <StackPanel
-                                            Grid.Column="1"
-                                            VerticalAlignment="Center"
-                                            Padding="14,0"
-                                            Spacing="2"
+                            <GridView
+                                x:Name="UserPlaylistsGrid"
+                                SelectionMode="None"
+                                IsItemClickEnabled="True"
+                                ItemClick="PlaylistItem_Click"
+                                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                            >
+                                <GridView.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <ItemsStackPanel Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </GridView.ItemsPanel>
+                                <GridView.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid
+                                            Width="240"
+                                            Height="88"
+                                            Margin="0,0,8,0"
+                                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                            CornerRadius="8"
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                            BorderThickness="1"
                                         >
-                                            <TextBlock
-                                                Text="{Binding Title}"
-                                                Style="{StaticResource BodyStrongTextBlockStyle}"
-                                                TextTrimming="CharacterEllipsis"
-                                                MaxLines="1"
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="88" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <controls:ImagePlaceholderControl
+                                                ImageSource="{Binding CoverUrl}"
+                                                FallbackGlyph="&#xE8D6;"
+                                                IconSize="28"
+                                                ImageCornerRadius="8,0,0,8"
                                             />
-                                            <TextBlock
-                                                Style="{StaticResource CaptionTextBlockStyle}"
-                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                            <StackPanel
+                                                Grid.Column="1"
+                                                VerticalAlignment="Center"
+                                                Padding="14,0"
+                                                Spacing="2"
                                             >
-                                                <Run
-                                                    Text="{Binding TrackCount}"
+                                                <TextBlock
+                                                    Text="{Binding Title}"
+                                                    Style="{StaticResource BodyStrongTextBlockStyle}"
+                                                    TextTrimming="CharacterEllipsis"
+                                                    MaxLines="1"
                                                 />
-                                                <Run x:Uid="LibraryPlaylists_TrackCount" />
-                                            </TextBlock>
-                                            <TextBlock
-                                                Text="{Binding Duration}"
-                                                Style="{StaticResource CaptionTextBlockStyle}"
-                                                Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                                            />
-                                        </StackPanel>
-                                    </Grid>
-                                </DataTemplate>
-                            </GridView.ItemTemplate>
-                        </GridView>
-                    </ScrollViewer>
-                </StackPanel>
+                                                <TextBlock
+                                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                >
+                                                    <Run
+                                                        Text="{Binding TrackCount}"
+                                                    />
+                                                    <Run x:Uid="LibraryPlaylists_TrackCount" />
+                                                </TextBlock>
+                                                <TextBlock
+                                                    Text="{Binding Duration}"
+                                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                                />
+                                            </StackPanel>
+                                        </Grid>
+                                    </DataTemplate>
+                                </GridView.ItemTemplate>
+                            </GridView>
+                        </ScrollViewer>
+                    </StackPanel>
 
-                <!-- Saved Albums -->
-                <controls:CarouselSectionControl
-                    x:Name="AlbumsCarousel"
-                    x:Uid="LibraryAlbums"
-                    Visibility="Collapsed"
-                    ItemClick="AlbumItem_Click"
-                >
-                    <controls:CarouselSectionControl.ItemTemplate>
-                        <DataTemplate>
-                            <controls:MediaCardControl
-                                CardWidth="180"
-                                TitleText="{Binding Title}"
-                                SubtitleText="{Binding Artist}"
-                                ImageUrl="{Binding CoverUrl}"
-                                FallbackGlyph="&#xE93C;"
-                            />
-                        </DataTemplate>
-                    </controls:CarouselSectionControl.ItemTemplate>
-                </controls:CarouselSectionControl>
-
-                <!-- Liked Songs -->
-                <StackPanel
-                    x:Name="LikedSongsSection"
-                    Spacing="12"
-                    Visibility="Collapsed"
-                >
-                    <TextBlock
-                        x:Uid="LibraryLikedSongs_Title"
-                        Style="{StaticResource SubtitleTextBlockStyle}"
-                    />
-
-                    <!-- Column Headers -->
-                    <controls:TrackListHeaderControl
-                        ShowHeart="True"
-                        Margin="0,0,0,-8"
-                    />
-
-                    <ListView
-                        x:Name="LikedSongsList"
-                        SelectionMode="None"
-                        IsItemClickEnabled="True"
-                        ItemClick="TrackItem_Click"
-                        RightTapped="TrackItem_RightTapped"
+                    <!-- Saved Albums -->
+                    <controls:CarouselSectionControl
+                        x:Name="AlbumsCarousel"
+                        x:Uid="LibraryAlbums"
+                        Visibility="Collapsed"
+                        ItemClick="AlbumItem_Click"
                     >
-                        <ListView.ItemTemplate>
+                        <controls:CarouselSectionControl.ItemTemplate>
                             <DataTemplate>
-                                <controls:TrackListItemControl
-                                    ShowHeart="True"
-                                    AlbumColumnWidth="0.5*"
+                                <controls:MediaCardControl
+                                    CardWidth="180"
+                                    TitleText="{Binding Title}"
+                                    SubtitleText="{Binding Artist}"
+                                    ImageUrl="{Binding CoverUrl}"
+                                    FallbackGlyph="&#xE93C;"
                                 />
                             </DataTemplate>
-                        </ListView.ItemTemplate>
-                    </ListView>
-                </StackPanel>
+                        </controls:CarouselSectionControl.ItemTemplate>
+                    </controls:CarouselSectionControl>
 
-            </StackPanel>
-        </ScrollViewer>
+                    <!-- Liked Songs (the tracks themselves are the list items) -->
+                    <StackPanel
+                        x:Name="LikedSongsSection"
+                        Spacing="12"
+                        Visibility="Collapsed"
+                    >
+                        <TextBlock
+                            x:Uid="LibraryLikedSongs_Title"
+                            Style="{StaticResource SubtitleTextBlockStyle}"
+                        />
+
+                        <!-- Column Headers -->
+                        <controls:TrackListHeaderControl ShowHeart="True" />
+                    </StackPanel>
+
+                </StackPanel>
+            </ListView.Header>
+
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <controls:TrackListItemControl
+                        ShowHeart="True"
+                        AlbumColumnWidth="0.5*"
+                    />
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
     </Grid>
 </Page>

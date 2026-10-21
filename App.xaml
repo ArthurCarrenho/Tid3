@@ -30,7 +30,6 @@
             <converters:BoolToFontWeightConverter
                 x:Key="BoolToFontWeightConverter"
             />
-            <converters:QualityColorConverter x:Key="QualityColorConverter" />
             <converters:BoolToOpacityConverter x:Key="BoolToOpacityConverter" />
             <converters:BoolToGlyphConverter x:Key="BoolToGlyphConverter" />
             <converters:BoolToForegroundConverter

@@ -43,7 +43,7 @@ public sealed class TrayIconHelper : IDisposable
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
     private static extern bool Shell_NotifyIcon(int dwMessage, ref NOTIFYICONDATA pnid);
 
-    [DllImport("user32.dll")]
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern IntPtr LoadImage(IntPtr hInst, string name, uint type, int cx, int cy, uint flags);
 
     [DllImport("user32.dll")]

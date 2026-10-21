@@ -27,6 +27,13 @@ public sealed class TidalApiClient : IDisposable
     private string _countryCode = "US";
     private int _userId;
 
+    // Several requests can hit a 401 at once when the token expires. Only one of them may
+    // refresh; the others wait and reuse the new token instead of refreshing again.
+    private readonly SemaphoreSlim _refreshLock = new(1, 1);
+
+    private const int PageSize = 100;
+    private const int MaxPagedItems = 10_000;
+
     public string CountryCode
     {
         get => _countryCode;
@@ -46,7 +53,8 @@ public sealed class TidalApiClient : IDisposable
     {
         _clientId = clientId;
         _clientSecret = clientSecret;
-        _http = new HttpClient { BaseAddress = new Uri(BaseUrl) };
+        // The default 100 s would leave a track "loading" for minutes on a dead connection.
+        _http = new HttpClient { BaseAddress = new Uri(BaseUrl), Timeout = TimeSpan.FromSeconds(30) };
     }
 
     // ??????????????????????????????????????????????
@@ -59,7 +67,7 @@ public sealed class TidalApiClient : IDisposable
     /// </summary>
     public async Task<DeviceAuthResponse> StartDeviceAuthAsync(CancellationToken ct = default)
     {
-        var content = new FormUrlEncodedContent(new Dictionary<string, string>
+        using var content = new FormUrlEncodedContent(new Dictionary<string, string>
         {
             ["client_id"] = _clientId,
             ["scope"] = "r_usr+w_usr+w_sub"
@@ -80,7 +88,7 @@ public sealed class TidalApiClient : IDisposable
     /// </summary>
     public async Task<TokenResponse?> PollDeviceTokenAsync(string deviceCode, CancellationToken ct = default)
     {
-        var content = new FormUrlEncodedContent(new Dictionary<string, string>
+        using var content = new FormUrlEncodedContent(new Dictionary<string, string>
         {
             ["client_id"] = _clientId,
             ["client_secret"] = _clientSecret,
@@ -123,7 +131,7 @@ public sealed class TidalApiClient : IDisposable
         if (_refreshToken is null)
             throw new InvalidOperationException("No refresh token available.");
 
-        var content = new FormUrlEncodedContent(new Dictionary<string, string>
+        using var content = new FormUrlEncodedContent(new Dictionary<string, string>
         {
             ["client_id"] = _clientId,
             ["client_secret"] = _clientSecret,
@@ -162,7 +170,30 @@ public sealed class TidalApiClient : IDisposable
         _refreshToken = refreshToken;
         _userId = userId;
         _countryCode = countryCode;
-        _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+    }
+
+    /// <summary>
+    /// Forgets the tokens held in memory. Clearing the stored copy is up to the caller
+    /// (TokenStorageService); without this, a refresh racing the sign-out would save them again.
+    /// </summary>
+    public void SignOut()
+    {
+        _accessToken = null;
+        _refreshToken = null;
+        _userId = 0;
+    }
+
+    /// <summary>
+    /// Fills in the account id and country when the stored session lacked them, keeping the
+    /// current tokens, and persists the result.
+    /// </summary>
+    public void SetUser(int userId, string? countryCode)
+    {
+        _userId = userId;
+        if (!string.IsNullOrEmpty(countryCode))
+            _countryCode = countryCode;
+        if (_accessToken is not null)
+            TokenChanged?.Invoke(_accessToken, _refreshToken, _userId, _countryCode);
     }
 
     // ??????????????????????????????????????????????
@@ -382,69 +413,36 @@ public sealed class TidalApiClient : IDisposable
 
     // ---------- Lyrics  -------------------------------------------------------
 
-    public async Task<List<TidalLyricsSubtitle>?> GetTrackLyricsAsync(int trackId)
+    /// <summary>
+    /// TIDAL's own lyrics for a track, unparsed, with the status code (null when the request
+    /// didn't get through). Most client ids are refused here; see LyricsService for the
+    /// sources actually relied on.
+    /// </summary>
+    public async Task<(TidalLyricsData? Lyrics, System.Net.HttpStatusCode? Status)> GetTrackLyricsAsync(
+        int trackId, CancellationToken ct = default)
     {
         try
         {
             EnsureAuthenticated();
             var url = $"https://api.tidal.com/v1/tracks/{trackId}/lyrics?countryCode={_countryCode}";
-            
-            using var response = await _http.GetAsync(url);
-            if (!response.IsSuccessStatusCode) return null;
 
-            var json = await response.Content.ReadAsStringAsync();
-            var lyricsData = System.Text.Json.JsonSerializer.Deserialize<TritonLyricsData>(json, JsonOptions);
+            // Not SendAuthorizedAsync: a 401 here means this client isn't allowed lyrics, not
+            // that the token expired, and refreshing it on every track would be pointless.
+            using var response = await SendWithTokenAsync(new HttpRequestMessage(HttpMethod.Get, url), _accessToken, ct);
+            if (!response.IsSuccessStatusCode) return (null, response.StatusCode);
 
-            var subtitlesLrc = lyricsData?.Subtitles;
-            if (string.IsNullOrEmpty(subtitlesLrc))
-            {
-                // Fallback to plain lyrics if subtitles aren't available but lyrics are
-                var plainLyrics = lyricsData?.Lyrics;
-                if (!string.IsNullOrEmpty(plainLyrics))
-                {
-                     // Return a single dummy subtitle to hold plain lyrics, or handle in UI.
-                     return new List<TidalLyricsSubtitle>(); 
-                }
-                return null;
-            }
-
-            return ParseLrc(subtitlesLrc);
+            var json = await response.Content.ReadAsStringAsync(ct);
+            return (JsonSerializer.Deserialize<TidalLyricsData>(json, JsonOptions), response.StatusCode);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            // Superseded by a newer request — let the caller discard this result.
+            throw;
         }
         catch
         {
-            return null;
+            return (null, null);
         }
-    }
-
-    private List<TidalLyricsSubtitle> ParseLrc(string lrc)
-    {
-        var result = new List<TidalLyricsSubtitle>();
-        var lines = lrc.Split(new[] { '\r', '\n' }, System.StringSplitOptions.RemoveEmptyEntries);
-
-        foreach (var line in lines)
-        {
-            // Expected format: [mm:ss.xx] Text
-            // e.g. [00:04.63] Line text
-            if (line.StartsWith("[") && line.Length > 10)
-            {
-                var timeEndIdx = line.IndexOf("]");
-                if (timeEndIdx > 0)
-                {
-                    var timeStr = line.Substring(1, timeEndIdx - 1); // e.g., "00:04.63"
-                    var textStr = line.Substring(timeEndIdx + 1).Trim();
-
-                    if (System.TimeSpan.TryParseExact(timeStr, @"mm\:ss\.ff", null, out var ts))
-                    {
-                        result.Add(new TidalLyricsSubtitle
-                        {
-                            StartTimeMs = (int)ts.TotalMilliseconds,
-                            Text = textStr
-                        });
-                    }
-                }
-            }
-        }
-        return result;
     }
 
     // ??????????????????????????????????????????????
@@ -463,14 +461,29 @@ public sealed class TidalApiClient : IDisposable
             $"playlists/{playlistUuid}/items?limit={limit}&offset={offset}&countryCode={_countryCode}", ct);
     }
 
+    /// <summary>
+    /// Every item of a playlist, one page at a time, so the first tracks can be shown while
+    /// the rest of a long playlist is still loading.
+    /// </summary>
+    public IAsyncEnumerable<List<TidalTrackItem>> GetPlaylistTrackPagesAsync(string playlistUuid, CancellationToken ct = default)
+        => GetPagesAsync(offset => GetPlaylistTracksAsync(playlistUuid, PageSize, offset, ct));
+
     // =========================================================================
     //  Mixes
     // =========================================================================
 
-    public async Task<TidalPlaylist> GetMixAsPlaylistAsync(string mixId, CancellationToken ct = default)
+    /// <summary>
+    /// A mix's header and its tracks. Both come from the same pages/mix response, which used
+    /// to be fetched twice, once for each.
+    /// </summary>
+    public async Task<(TidalPlaylist Info, List<TidalTrackItem> Tracks)> GetMixAsync(string mixId, CancellationToken ct = default)
     {
-        var json = await GetAsync<System.Text.Json.JsonElement>($"pages/mix?mixId={mixId}&countryCode={_countryCode}&deviceType=BROWSER", ct);
+        var json = await GetAsync<JsonElement>($"pages/mix?mixId={mixId}&countryCode={_countryCode}&deviceType=BROWSER", ct);
+        return (ParseMixHeader(mixId, json), ParseMixTracks(json));
+    }
 
+    private static TidalPlaylist ParseMixHeader(string mixId, JsonElement json)
+    {
         var playlist = new TidalPlaylist { Uuid = mixId };
 
         if (json.TryGetProperty("rows", out var rows) && rows.ValueKind == System.Text.Json.JsonValueKind.Array)
@@ -488,7 +501,7 @@ public sealed class TidalApiClient : IDisposable
                                 if (mix.TryGetProperty("title", out var titleObj))
                                     playlist.Title = titleObj.GetString() ?? "";
                                 if (mix.TryGetProperty("subTitle", out var subTitleObj))
-                                    playlist.Description = subTitleObj.GetString();
+                                    playlist.Description = subTitleObj.GetString() ?? "";
 
                                 if (mix.TryGetProperty("images", out var images) && images.ValueKind == System.Text.Json.JsonValueKind.Object && images.TryGetProperty("LARGE", out var large) && large.ValueKind == System.Text.Json.JsonValueKind.Object && large.TryGetProperty("url", out var urlStr))
                                 {
@@ -507,11 +520,8 @@ public sealed class TidalApiClient : IDisposable
         return playlist;
     }
 
-    public async Task<TidalPagedResult<TidalTrackItem>> GetMixTracksAsync(
-        string mixId, int limit = 50, int offset = 0, CancellationToken ct = default)
+    private static List<TidalTrackItem> ParseMixTracks(JsonElement pageJson)
     {
-        var pageJson = await GetAsync<System.Text.Json.JsonElement>($"pages/mix?mixId={mixId}&countryCode={_countryCode}&deviceType=BROWSER", ct);
-
         // Mix API returns bare TidalTrack objects in pagedList.items (not wrapped in TidalTrackItem).
         // Extract them directly from the initial page JSON and wrap them.
         if (pageJson.TryGetProperty("rows", out var rows) && rows.ValueKind == System.Text.Json.JsonValueKind.Array)
@@ -533,7 +543,7 @@ public sealed class TidalApiClient : IDisposable
                                     if (track != null)
                                         tracks.Add(new TidalTrackItem { Item = track });
                                 }
-                                return new TidalPagedResult<TidalTrackItem> { Items = tracks };
+                                return tracks;
                             }
                         }
                     }
@@ -541,7 +551,7 @@ public sealed class TidalApiClient : IDisposable
             }
         }
 
-        return new TidalPagedResult<TidalTrackItem> { Items = new() };
+        return [];
     }
 
     // ??????????????????????????????????????????????
@@ -558,23 +568,63 @@ public sealed class TidalApiClient : IDisposable
             $"&order={order}&orderDirection={orderDirection}&countryCode={_countryCode}", ct);
     }
 
+    /// <summary>Every favorited track, newest first, one page at a time.</summary>
+    public IAsyncEnumerable<List<TidalTrackItem>> GetFavoriteTrackPagesAsync(CancellationToken ct = default)
+        => GetPagesAsync(offset => GetFavoriteTracksAsync(PageSize, offset, ct: ct));
+
+    /// <summary>
+    /// Ids of every favorited track. Uses the compact favorites/ids listing, and falls back
+    /// to paging through the full favorites if that endpoint is unavailable.
+    /// </summary>
+    public async Task<HashSet<int>> GetFavoriteTrackIdsAsync(CancellationToken ct = default)
+    {
+        EnsureUserId();
+        try
+        {
+            var json = await GetAsync<JsonElement>($"users/{_userId}/favorites/ids?countryCode={_countryCode}", ct);
+            if (json.TryGetProperty("TRACK", out var tracks) && tracks.ValueKind == JsonValueKind.Array)
+            {
+                var ids = new HashSet<int>();
+                foreach (var el in tracks.EnumerateArray())
+                {
+                    if (el.ValueKind == JsonValueKind.Number && el.TryGetInt32(out var number))
+                        ids.Add(number);
+                    else if (el.ValueKind == JsonValueKind.String && int.TryParse(el.GetString(), out number))
+                        ids.Add(number);
+                }
+                return ids;
+            }
+        }
+        catch (OperationCanceledException) { throw; }
+        catch { /* fall back to paging below */ }
+
+        var all = await GetAllPagesAsync(offset => GetFavoriteTracksAsync(PageSize, offset, ct: ct));
+        var result = new HashSet<int>();
+        foreach (var item in all)
+            if (item.Item is not null) result.Add(item.Item.Id);
+        return result;
+    }
+
     public async Task AddFavoriteTrackAsync(int trackId, CancellationToken ct = default)
     {
         EnsureUserId();
-        var content = new FormUrlEncodedContent(new Dictionary<string, string>
+        using var response = await SendAuthorizedAsync(() => new HttpRequestMessage(
+            HttpMethod.Post, $"users/{_userId}/favorites/tracks")
         {
-            ["trackIds"] = trackId.ToString(),
-            ["countryCode"] = _countryCode
-        });
-        using var response = await _http.PostAsync($"users/{_userId}/favorites/tracks", content, ct);
+            Content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["trackIds"] = trackId.ToString(),
+                ["countryCode"] = _countryCode
+            })
+        }, ct);
         response.EnsureSuccessStatusCode();
     }
 
     public async Task RemoveFavoriteTrackAsync(int trackId, CancellationToken ct = default)
     {
         EnsureUserId();
-        using var response = await _http.DeleteAsync(
-            $"users/{_userId}/favorites/tracks/{trackId}?countryCode={_countryCode}", ct);
+        using var response = await SendAuthorizedAsync(() => new HttpRequestMessage(
+            HttpMethod.Delete, $"users/{_userId}/favorites/tracks/{trackId}?countryCode={_countryCode}"), ct);
         response.EnsureSuccessStatusCode();
     }
 
@@ -627,41 +677,128 @@ public sealed class TidalApiClient : IDisposable
 
     private async Task<T> GetAsync<T>(string relativeUrl, CancellationToken ct)
     {
-        EnsureAuthenticated();
-        
         if (!relativeUrl.Contains("locale="))
         {
             var locale = System.Linq.Enumerable.FirstOrDefault(Windows.Globalization.ApplicationLanguages.Languages)?.Replace("-", "_") ?? "en_US";
             relativeUrl += (relativeUrl.Contains("?") ? "&" : "?") + $"locale={locale}";
         }
 
-        using var response = await _http.GetAsync(relativeUrl, ct);
-
-        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized && _refreshToken is not null)
+        // GETs are safe to repeat, and one hiccup (a 503, a rate limit, a dropped connection)
+        // shouldn't fail a playlist that is fifty pages deep.
+        for (var attempt = 1; ; attempt++)
         {
-            await RefreshAccessTokenAsync(ct);
-            using var retryResponse = await _http.GetAsync(relativeUrl, ct);
-            retryResponse.EnsureSuccessStatusCode();
-            var retryJson = await retryResponse.Content.ReadAsStringAsync(ct);
-            return JsonSerializer.Deserialize<T>(retryJson, JsonOptions)
-                ?? throw new InvalidOperationException($"Failed to deserialize response from {relativeUrl}");
-        }
+            HttpResponseMessage response;
+            try
+            {
+                response = await SendAuthorizedAsync(() => new HttpRequestMessage(HttpMethod.Get, relativeUrl), ct);
+            }
+            catch (HttpRequestException) when (attempt < MaxGetAttempts && !ct.IsCancellationRequested)
+            {
+                await Task.Delay(GetRetryDelay(attempt, null), ct);
+                continue;
+            }
 
-        if (!response.IsSuccessStatusCode)
+            using (response)
+            {
+                if (IsTransient(response.StatusCode) && attempt < MaxGetAttempts)
+                {
+                    await Task.Delay(GetRetryDelay(attempt, response.Headers.RetryAfter), ct);
+                    continue;
+                }
+
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync(ct);
+                return JsonSerializer.Deserialize<T>(json, JsonOptions)
+                    ?? throw new InvalidOperationException($"Failed to deserialize response from {relativeUrl}");
+            }
+        }
+    }
+
+    private const int MaxGetAttempts = 3;
+
+    private static bool IsTransient(System.Net.HttpStatusCode status) => status is
+        System.Net.HttpStatusCode.TooManyRequests or
+        System.Net.HttpStatusCode.InternalServerError or
+        System.Net.HttpStatusCode.BadGateway or
+        System.Net.HttpStatusCode.ServiceUnavailable or
+        System.Net.HttpStatusCode.GatewayTimeout;
+
+    // Honour a short Retry-After from a rate limit, otherwise back off 1 s, then 2 s.
+    private static TimeSpan GetRetryDelay(int attempt, RetryConditionHeaderValue? retryAfter) =>
+        retryAfter?.Delta is { } delta && delta <= TimeSpan.FromSeconds(10)
+            ? delta
+            : TimeSpan.FromSeconds(attempt);
+
+    /// <summary>
+    /// Sends a request with the current access token, refreshing it and retrying once on a
+    /// 401. The token goes on each request rather than on DefaultRequestHeaders, which must
+    /// not be modified while other requests are in flight.
+    /// </summary>
+    private async Task<HttpResponseMessage> SendAuthorizedAsync(Func<HttpRequestMessage> createRequest, CancellationToken ct)
+    {
+        EnsureAuthenticated();
+
+        var tokenUsed = _accessToken;
+        var response = await SendWithTokenAsync(createRequest(), tokenUsed, ct);
+        if (response.StatusCode != System.Net.HttpStatusCode.Unauthorized || _refreshToken is null)
+            return response;
+
+        response.Dispose();
+        await RefreshOnceAsync(tokenUsed, ct);
+        return await SendWithTokenAsync(createRequest(), _accessToken, ct);
+    }
+
+    private async Task<HttpResponseMessage> SendWithTokenAsync(HttpRequestMessage request, string? token, CancellationToken ct)
+    {
+        using (request)
         {
-            response.EnsureSuccessStatusCode();
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            return await _http.SendAsync(request, ct);
         }
+    }
 
-        var json = await response.Content.ReadAsStringAsync(ct);
+    private async Task RefreshOnceAsync(string? rejectedToken, CancellationToken ct)
+    {
+        await _refreshLock.WaitAsync(ct);
         try
         {
-            return JsonSerializer.Deserialize<T>(json, JsonOptions)
-                ?? throw new InvalidOperationException($"Failed to deserialize response from {relativeUrl}");
+            // Another request already refreshed while this one waited for the lock.
+            if (_accessToken != rejectedToken) return;
+            await RefreshAccessTokenAsync(ct);
         }
-        catch (JsonException)
+        finally
         {
-            throw;
+            _refreshLock.Release();
         }
+    }
+
+    /// <summary>
+    /// Walks every page of a paged endpoint. Stops at the reported total, at a short or
+    /// empty page, or at <see cref="MaxPagedItems"/> as a safety net.
+    /// </summary>
+    private static async IAsyncEnumerable<List<T>> GetPagesAsync<T>(Func<int, Task<TidalPagedResult<T>>> fetchPage)
+    {
+        var loaded = 0;
+        while (loaded < MaxPagedItems)
+        {
+            var page = await fetchPage(loaded);
+            if (page.Items is not { Count: > 0 }) yield break;
+            loaded += page.Items.Count;
+            yield return page.Items;
+
+            var reachedEnd = page.TotalNumberOfItems > 0
+                ? loaded >= page.TotalNumberOfItems
+                : page.Items.Count < PageSize;
+            if (reachedEnd) yield break;
+        }
+    }
+
+    private static async Task<List<T>> GetAllPagesAsync<T>(Func<int, Task<TidalPagedResult<T>>> fetchPage)
+    {
+        var all = new List<T>();
+        await foreach (var page in GetPagesAsync(fetchPage))
+            all.AddRange(page);
+        return all;
     }
 
     private void ApplyToken(TokenResponse token)
@@ -675,7 +812,6 @@ public sealed class TidalApiClient : IDisposable
             if (!string.IsNullOrEmpty(token.User.CountryCode))
                 _countryCode = token.User.CountryCode;
         }
-        _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _accessToken);
         TokenChanged?.Invoke(_accessToken, _refreshToken, _userId, _countryCode);
     }
 

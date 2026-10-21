@@ -128,9 +128,6 @@
                     Maximum="100"
                     VerticalAlignment="Center"
                     Margin="8,0"
-                    PointerPressed="ProgressSlider_PointerPressed"
-                    PointerReleased="ProgressSlider_PointerReleased"
-                    PointerCaptureLost="ProgressSlider_PointerReleased"
                 />
                 <TextBlock
                     x:Name="TotalTimeText"
@@ -337,6 +334,7 @@
                 x:Name="VolumeControl"
                 Margin="6,0,0,0"
                 VolumeChanged="VolumeControl_VolumeChanged"
+                MuteClick="VolumeControl_MuteClick"
             />
         </StackPanel>
     </Grid>

@@ -14,6 +14,8 @@
     <WinUISDKReferences>false</WinUISDKReferences>
     <EnableMsixTooling>true</EnableMsixTooling>
     <Nullable>enable</Nullable>
+    <!-- Program.cs has its own Main, which keeps the app to a single instance. -->
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <Page Remove="Pages\LoginPage.xaml" />

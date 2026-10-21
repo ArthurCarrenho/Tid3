@@ -53,7 +53,7 @@ public class LastFmService
             HttpResponseMessage response;
             if (method == HttpMethod.Post)
             {
-                var content = new FormUrlEncodedContent(parameters);
+                using var content = new FormUrlEncodedContent(parameters);
                 response = await _http.PostAsync(BaseUrl, content);
             }
             else
@@ -62,6 +62,7 @@ public class LastFmService
                 response = await _http.GetAsync($"{BaseUrl}?{query}");
             }
 
+            using var _ = response;
             if (!response.IsSuccessStatusCode) return null;
 
             var json = await response.Content.ReadAsStringAsync();

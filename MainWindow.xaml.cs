@@ -22,8 +22,19 @@ public sealed partial class MainWindow : Window
     private readonly QueueService _queue = App.Queue;
     private readonly PlaybackService _playback = App.Playback;
     private readonly TidalApiClient _api = App.ApiClient;
-    private bool _isLiked;
     private readonly Microsoft.UI.Dispatching.DispatcherQueue _uiQueue;
+    private readonly Microsoft.Windows.ApplicationModel.Resources.ResourceLoader _resourceLoader = new();
+
+    // A track that fails is skipped, but after this many in a row the problem isn't the
+    // track (offline, TIDAL down), so playback stops instead of burning through the queue.
+    private const int MaxConsecutivePlaybackFailures = 3;
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _playbackMessageTimer;
+
+    // Set by anything the saved session holds, so an idle, paused app stops rewriting it.
+    private bool _sessionDirty = true;
+
+    // Pending sync broadcast, see BroadcastState.
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _broadcastTimer;
 
     // Queue panel state
     private bool _queuePanelVisible;
@@ -53,19 +64,27 @@ public sealed partial class MainWindow : Window
         _uiQueue = DispatcherQueue;
         ApplyTheme();
 
+        // A click anywhere on the page closes the search suggestions, even where nothing
+        // takes focus. handledEventsToo, because list items and buttons handle the press.
+        ContentFrame.AddHandler(UIElement.PointerPressedEvent,
+            new PointerEventHandler((_, _) => PageHeader.CloseSuggestions()), true);
+
         _queue.CurrentTrackChanged += OnCurrentTrackChanged;
+        _queue.Queue.CollectionChanged += (_, _) => _sessionDirty = true;
+        _queue.ModesChanged += () => _sessionDirty = true;
         _playback.PositionChanged += OnPositionChanged;
         _playback.PlaybackEnded += OnPlaybackEnded;
-        _playback.PlaybackStarted += () => { BroadcastState(); ScrobbleResume(); UpdateDiscordPresence(true); };
-        _playback.PlaybackPaused += () => { BroadcastState(); ScrobblePause(); UpdateDiscordPresence(false); };
-        _playback.VolumeChanged += (_) => BroadcastState();
+        _playback.PlaybackFailed += OnPlaybackFailed;
+        _playback.PlaybackStarted += () => { _sessionDirty = true; BroadcastState(); ScrobbleResume(); UpdateDiscordPresence(true); };
+        _playback.PlaybackPaused += () => { _sessionDirty = true; BroadcastState(); ScrobblePause(); UpdateDiscordPresence(false); };
+        _playback.VolumeChanged += (_) => { _sessionDirty = true; BroadcastState(); };
         _playback.SmtcNext += () => _uiQueue.TryEnqueue(() => _queue.Next());
-        _playback.SmtcPrevious += () => _uiQueue.TryEnqueue(() => _queue.Previous());
+        _playback.SmtcPrevious += () => _uiQueue.TryEnqueue(() => _playback.SkipPrevious());
         _playback.PlaybackStarted += () => _uiQueue.TryEnqueue(() => _thumbToolbar.UpdatePlayPauseIcon(true));
         _playback.PlaybackPaused += () => _uiQueue.TryEnqueue(() => _thumbToolbar.UpdatePlayPauseIcon(false));
 
         // Taskbar thumbnail toolbar (prev/pause/next)
-        _thumbToolbar.PreviousClicked += () => _uiQueue.TryEnqueue(() => _queue.Previous());
+        _thumbToolbar.PreviousClicked += () => _uiQueue.TryEnqueue(() => _playback.SkipPrevious());
         _thumbToolbar.PlayPauseClicked += () => _uiQueue.TryEnqueue(() => _playback.TogglePlayPause());
         _thumbToolbar.NextClicked += () => _uiQueue.TryEnqueue(() => _queue.Next());
         _thumbToolbar.Initialize(this);
@@ -94,7 +113,10 @@ public sealed partial class MainWindow : Window
             }
             else
             {
+                SaveSessionOnExit();
                 _trayIcon.Dispose();
+                _thumbToolbar.Dispose();
+                _syncService?.Dispose();
                 App.DiscordRpc.Dispose();
             }
         };
@@ -123,23 +145,56 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private async void BroadcastState()
+    /// <summary>
+    /// Publishes the playback state to the other devices. Dragging the volume slider or a
+    /// burst of play/pause calls this many times a second, and every update carries the
+    /// whole queue, so calls within a short window collapse into one send.
+    /// </summary>
+    private void BroadcastState()
+    {
+        if (!_uiQueue.HasThreadAccess)
+        {
+            _uiQueue.TryEnqueue(BroadcastState);
+            return;
+        }
+        if (_syncService is not { IsConnected: true }) return;
+
+        if (_broadcastTimer is null)
+        {
+            _broadcastTimer = _uiQueue.CreateTimer();
+            _broadcastTimer.Interval = TimeSpan.FromMilliseconds(300);
+            _broadcastTimer.IsRepeating = false;
+            _broadcastTimer.Tick += (_, _) => SendStateNow();
+        }
+        if (!_broadcastTimer.IsRunning)
+            _broadcastTimer.Start();
+    }
+
+    private async void SendStateNow()
     {
         if (_syncService != null && _syncService.IsConnected)
         {
-            await _syncService.UpdateStateAsync(new SyncState
+            try
             {
-                Queue = new List<Track>(_queue.Queue),
-                CurrentIndex = _queue.CurrentIndex,
-                PositionSeconds = _playback.Position.TotalSeconds,
-                DurationSeconds = _playback.Duration.TotalSeconds,
-                Volume = _playback.Volume,
-                IsPlaying = _playback.IsPlaying,
-                Shuffle = _queue.Shuffle,
-                Repeat = _queue.Repeat,
-                ActiveDeviceId = _syncService.DeviceId,
-                ActiveDeviceName = Environment.MachineName
-            });
+                await _syncService.UpdateStateAsync(new SyncState
+                {
+                    Queue = new List<Track>(_queue.Queue),
+                    CurrentIndex = _queue.CurrentIndex,
+                    PositionSeconds = _playback.Position.TotalSeconds,
+                    DurationSeconds = _playback.Duration.TotalSeconds,
+                    Volume = _playback.Volume,
+                    IsPlaying = _playback.IsPlaying,
+                    Shuffle = _queue.Shuffle,
+                    Repeat = _queue.Repeat,
+                    ActiveDeviceId = _syncService.DeviceId,
+                    ActiveDeviceName = Environment.MachineName
+                });
+            }
+            catch
+            {
+                // The socket can drop between the IsConnected check and the send. An
+                // exception escaping this async void would take the whole app down.
+            }
         }
     }
 
@@ -148,20 +203,31 @@ public sealed partial class MainWindow : Window
     private async void TryRestoreOrShowLogin()
     {
         var api = App.ApiClient;
-        if (api.IsAuthenticated)
+        if (!api.IsAuthenticated)
         {
-            try
-            {
-                await api.RefreshAccessTokenAsync();
-                ShowMainApp();
-                return;
-            }
-            catch
-            {
-                TokenStorageService.Clear();
-            }
+            ShowLogin();
+            return;
         }
-        ShowLogin();
+
+        try
+        {
+            await api.RefreshAccessTokenAsync();
+        }
+        catch (System.Net.Http.HttpRequestException ex)
+            when (ex.StatusCode is System.Net.HttpStatusCode.BadRequest or System.Net.HttpStatusCode.Unauthorized)
+        {
+            // TIDAL rejected the refresh token, so the session really is over.
+            api.SignOut();
+            TokenStorageService.Clear();
+            ShowLogin();
+            return;
+        }
+        catch
+        {
+            // Offline or TIDAL unreachable. That is no reason to sign out: keep the session,
+            // requests refresh the token by themselves once the connection is back.
+        }
+        ShowMainApp();
     }
 
     private void ShowLogin()
@@ -191,39 +257,19 @@ public sealed partial class MainWindow : Window
         PageHeader.ApiClient = _api;
         PageHeader.NavigationRequested += (pageType, param) => ContentFrame.Navigate(pageType, param);
         LoadSidebarPlaylists();
+        _ = FavoritesService.LoadAsync();
 
         if (!_queue.HasTrack)
         {
             var session = await SessionStorageService.LoadAsync();
             if (session != null && session.Queue.Count > 0)
             {
-                _queue.PlayTracks(session.Queue, session.CurrentIndex, autoPlay: false);
-                _queue.Shuffle = session.Shuffle;
-                _queue.Repeat = session.Repeat;
-
-                if (session.PositionSeconds > 0)
-                {
-                    _ = System.Threading.Tasks.Task.Run(async () =>
-                    {
-                        await System.Threading.Tasks.Task.Delay(1500);
-                        _uiQueue.TryEnqueue(() =>
-                        {
-                            if (_playback.Player.PlaybackSession.CanSeek)
-                            {
-                                var pos = TimeSpan.FromSeconds(session.PositionSeconds);
-                                _playback.Player.PlaybackSession.Position = pos;
-                                
-                                // Explicitly update UI to prevent "0:00" flicker
-                                if (PlaybackBar != null)
-                                {
-                                    PlaybackBar.UpdatePositionManually(pos, TimeSpan.FromSeconds(session.DurationSeconds));
-                                    PlaybackBar.SetPlayingState(false); // Engine is paused by autoPlay: false
-                                }
-                            }
-                            _playback.Volume = session.Volume;
-                        });
-                    });
-                }
+                _playback.Volume = session.Volume;
+                // The saved order already reflects shuffle, so restore it untouched and
+                // only then bring the flags back. The track opens at the saved position.
+                _queue.RestoreQueue(session.Queue, session.CurrentIndex, autoPlay: false,
+                    TimeSpan.FromSeconds(Math.Max(0, session.PositionSeconds)));
+                _queue.SetModes(session.Shuffle, session.Repeat);
             }
         }
 
@@ -249,41 +295,76 @@ public sealed partial class MainWindow : Window
         {
             await System.Threading.Tasks.Task.Delay(10000);
             if (!App.ApiClient.IsAuthenticated) continue;
-            
-            var state = new SessionState
-            {
-                Queue = new List<Track>(_queue.Queue),
-                CurrentIndex = _queue.CurrentIndex,
-                PositionSeconds = _playback.Position.TotalSeconds,
-                DurationSeconds = _playback.Duration.TotalSeconds,
-                Volume = _playback.Volume,
-                IsPlaying = _playback.IsPlaying,
-                Shuffle = _queue.Shuffle,
-                Repeat = _queue.Repeat
-            };
-            
-            await SessionStorageService.SaveAsync(state);
 
-            if (_syncService != null && _syncService.IsConnected)
+            // While playing the position moves, so there is always something to save. Paused
+            // with nothing changed, the file already holds this exact state.
+            if (!_playback.IsPlaying && !_sessionDirty) continue;
+            _sessionDirty = false;
+
+            try
             {
-                await _syncService.UpdateStateAsync(new SyncState
+                var state = CaptureSessionState();
+
+                // Serializing a queue of thousands of tracks takes a while; keep it off the UI
+                // thread. The state holds its own copy of the queue list.
+                await System.Threading.Tasks.Task.Run(() => SessionStorageService.SaveAsync(state));
+
+                // Only the device that is actually playing publishes its state. An idle device
+                // pushing its stale queue every 10 s would overwrite edits made on the active one.
+                if (_syncService != null && _syncService.IsConnected && state.IsPlaying)
                 {
-                    Queue = state.Queue,
-                    CurrentIndex = state.CurrentIndex,
-                    PositionSeconds = state.PositionSeconds,
-                    DurationSeconds = state.DurationSeconds,
-                    Volume = state.Volume,
-                    IsPlaying = state.IsPlaying,
-                    Shuffle = state.Shuffle,
-                    Repeat = state.Repeat
-                });
+                    await _syncService.UpdateStateAsync(new SyncState
+                    {
+                        Queue = state.Queue,
+                        CurrentIndex = state.CurrentIndex,
+                        PositionSeconds = state.PositionSeconds,
+                        DurationSeconds = state.DurationSeconds,
+                        Volume = state.Volume,
+                        IsPlaying = state.IsPlaying,
+                        Shuffle = state.Shuffle,
+                        Repeat = state.Repeat
+                    });
+                }
+            }
+            catch
+            {
+                // A failed save or send must not end the loop (or, from async void, the app).
             }
         }
     }
 
+    private SessionState CaptureSessionState() => new()
+    {
+        Queue = new List<Track>(_queue.Queue),
+        CurrentIndex = _queue.CurrentIndex,
+        PositionSeconds = _playback.Position.TotalSeconds,
+        DurationSeconds = _playback.Duration.TotalSeconds,
+        Volume = _playback.Volume,
+        IsPlaying = _playback.IsPlaying,
+        Shuffle = _queue.Shuffle,
+        Repeat = _queue.Repeat
+    };
+
+    /// <summary>
+    /// The loop only saves every 10 s, so without this the last stretch of position and any
+    /// queue edit since would be lost on exit. Closing can't await; block briefly on a save
+    /// run on the thread pool, whose WinRT calls never need the UI thread, so no deadlock.
+    /// </summary>
+    private void SaveSessionOnExit()
+    {
+        if (!_isSessionLoopRunning || !_api.IsAuthenticated) return;
+        try
+        {
+            var state = CaptureSessionState();
+            System.Threading.Tasks.Task.Run(() => SessionStorageService.SaveAsync(state))
+                .Wait(TimeSpan.FromSeconds(2));
+        }
+        catch { /* exiting anyway */ }
+    }
+
     private void OnSyncStateReceived(SyncState state)
     {
-        _uiQueue.TryEnqueue(async () =>
+        _uiQueue.TryEnqueue(() =>
         {
             // Simple logic: if the queue is different, replace it.
             // In a real 'Connect' app, we might ask the user or only sync if not playing.
@@ -292,15 +373,14 @@ public sealed partial class MainWindow : Window
 
             if (queueChanged)
             {
-                _queue.PlayTracks(state.Queue, state.CurrentIndex, autoPlay: false);
+                _queue.RestoreQueue(state.Queue, state.CurrentIndex, autoPlay: false);
             }
             else if (state.CurrentIndex != _queue.CurrentIndex)
             {
                 _queue.SetCurrentIndex(state.CurrentIndex);
             }
 
-            _queue.Shuffle = state.Shuffle;
-            _queue.Repeat = state.Repeat;
+            _queue.SetModes(state.Shuffle, state.Repeat);
 
             // Update playback
             if (state.IsPlaying && !_playback.IsPlaying)
@@ -455,18 +535,12 @@ public sealed partial class MainWindow : Window
 
     private void ContentFrame_Navigated(object sender, Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
     {
+        PageHeader.CloseSuggestions();
         PageHeader.CanGoBack = ContentFrame.CanGoBack;
         PageHeader.CanGoForward = ContentFrame.CanGoForward;
     }
 
     // ─── Header Search ──────────────────────────────────────────
-
-    private void PageHeader_SuggestionChosen(object? sender, AutoSuggestBoxSuggestionChosenEventArgs args)
-    {
-        // Prevent the search box from replacing text with ToString()
-        if (sender is AutoSuggestBox box && args.SelectedItem is SearchSuggestion s && s.IsRichResult)
-            box.Text = box.Text; // keep current text
-    }
 
     private void PageHeader_SearchSubmitted(object? sender, AutoSuggestBoxQuerySubmittedEventArgs args)
     {
@@ -482,14 +556,16 @@ public sealed partial class MainWindow : Window
                     break;
                 case "track":
                     // Play track immediately
-                    var artistStr = suggestion.Subtitle?.Replace("Song · ", "") ?? "Unknown Artist";
                     var track = new Models.Track
                     {
                         Id = suggestion.TrackId,
                         Title = suggestion.Name,
-                        Artist = artistStr,
+                        Artist = string.IsNullOrEmpty(suggestion.ArtistName)
+                            ? _resourceLoader.GetString("Library_UnknownArtist") : suggestion.ArtistName,
                         CoverUrl = suggestion.CoverUrl,
-                        IsExplicit = suggestion.IsExplicit
+                        IsExplicit = suggestion.IsExplicit,
+                        AlbumId = suggestion.Id,
+                        ArtistId = suggestion.ArtistId
                     };
                     _queue.PlayTrack(track);
                     break;
@@ -527,7 +603,7 @@ public sealed partial class MainWindow : Window
             if (playlists.Count == 0) return;
 
             NavView.MenuItems.Add(new NavigationViewItemSeparator());
-            NavView.MenuItems.Add(new NavigationViewItemHeader { Content = "Playlists" });
+            NavView.MenuItems.Add(new NavigationViewItemHeader { Content = _resourceLoader.GetString("Sidebar_Playlists") });
 
             foreach (var p in playlists)
             {
@@ -545,7 +621,7 @@ public sealed partial class MainWindow : Window
                 });
                 stack.Children.Add(new TextBlock
                 {
-                    Text = $"{p.NumberOfTracks} tracks",
+                    Text = string.Format(_resourceLoader.GetString("PlaylistDetail_Tracks"), p.NumberOfTracks),
                     Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
                     Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"]
                 });
@@ -563,16 +639,26 @@ public sealed partial class MainWindow : Window
 
     private async void OnCurrentTrackChanged(Track? track)
     {
+        _sessionDirty = true;
+
         // Scrobble the previous track on skip if threshold was met
         TryScrobbleCurrent();
 
         if (track is not null)
         {
             _uiQueue.TryEnqueue(() => Title = $"{track.Title} — {track.Artist} | Tid3");
-            await _playback.PlayTrackAsync(track.Id, track.CoverUrl, track.Title, track.Artist, autoPlay: _queue.IsAutoPlayEnabled);
 
-            // Reset scrobble tracking for new track
+            // Track before loading: listening time only starts counting with PlaybackStarted,
+            // which the load raises once audio plays (or the user does, for a paused load).
             ScrobbleBegin(track);
+
+            await _playback.PlayTrackAsync(track.Id, track.CoverUrl, track.Title, track.Artist,
+                autoPlay: _queue.IsAutoPlayEnabled, startPosition: _queue.StartPosition);
+
+            // Skipping quickly starts loads that get cancelled. Only the track that is still
+            // current may announce itself, or every skipped one would send a Last.fm update,
+            // pop a notification and fetch lyrics.
+            if (!ReferenceEquals(_queue.CurrentTrack, track)) return;
 
             _ = LastFmService.UpdateNowPlayingAsync(track.Title, track.Artist);
 
@@ -588,7 +674,7 @@ public sealed partial class MainWindow : Window
 
             // Load lyrics if panel is open
             if (_lyricsVisible)
-                _ = LyricsPanel.LoadLyricsAsync(track.Id);
+                _ = LyricsPanel.LoadLyricsAsync(track);
 
             // Toast notification
             if (SettingsService.ShowNotifications)
@@ -596,6 +682,8 @@ public sealed partial class MainWindow : Window
         }
         else
         {
+            // The queue was emptied: the audio of the removed track must not keep playing.
+            _playback.Stop();
             _uiQueue.TryEnqueue(() =>
             {
                 Title = "Tid3";
@@ -616,56 +704,69 @@ public sealed partial class MainWindow : Window
         });
     }
 
-    private void OnPlaybackEnded()
+    // Raised on the UI thread by PlaybackService, so the queue is advanced synchronously:
+    // deferring it again would let other queue events slip in between.
+    private async void OnPlaybackEnded()
     {
-        _uiQueue.TryEnqueue(async () =>
+        // Natural end always qualifies — scrobble unconditionally
+        TryScrobbleCurrent(forceScrobble: true);
+        _scrobbleTrack = null;
+
+        if (_queue.AdvanceAfterTrackEnded()) return;
+        if (!SettingsService.PlayRadioAfterQueue || _queue.CurrentTrack is not { } lastTrack) return;
+
+        try
         {
-            // Natural end always qualifies — scrobble unconditionally
-            TryScrobbleCurrent(forceScrobble: true);
-            _scrobbleTrack = null;
+            var result = await _api.GetTrackRadioAsync(lastTrack.Id, limit: 50);
+            var index = 1;
+            var tracks = result.Items
+                .Where(t => t is not null && t.Id != lastTrack.Id)
+                .Select(t => TrackMapper.Map(t, index++))
+                .ToList();
 
-            if (!_queue.Next())
-            {
-                if (SettingsService.PlayRadioAfterQueue && _queue.CurrentTrack != null)
-                {
-                    try
-                    {
-                        var result = await App.ApiClient.GetTrackRadioAsync(_queue.CurrentTrack.Id, limit: 50);
-                        if (result?.Items != null)
-                        {
-                            var tracks = new System.Collections.Generic.List<Track>();
-                            foreach (var it in result.Items)
-                            {
-                                if (it == null) continue;
-                                var t = it;
-                                // Skip if it's the exact same as the last track
-                                if (tracks.Count == 0 && t.Id == _queue.CurrentTrack.Id) continue;
+            // Something else may have been started while the radio was loading.
+            if (tracks.Count == 0 || !ReferenceEquals(_queue.CurrentTrack, lastTrack)) return;
 
-                                tracks.Add(new Track
-                                {
-                                    Id = t.Id,
-                                    Title = t.Title,
-                                    Artist = t.Artist?.Name ?? "Unknown",
-                                    ArtistId = t.Artist?.Id ?? 0,
-                                    Album = t.Album?.Title ?? "",
-                                    AlbumId = t.Album?.Id ?? 0,
-                                    Duration = $"{t.Duration / 60}:{t.Duration % 60:D2}",
-                                    CoverUrl = TidalApiClient.GetImageUrl(t.Album?.Cover),
-                                    IsExplicit = t.Explicit
-                                });
-                            }
+            // Append rather than replace, so the queue panel keeps what was played before.
+            _queue.AddRange(tracks);
+            _queue.Next();
+        }
+        catch { }
+    }
 
-                            if (tracks.Count > 0)
-                            {
-                                _queue.PlayTracks(tracks, 0);
-                                return;
-                            }
-                        }
-                    }
-                    catch { }
-                }
-            }
-        });
+    private void OnPlaybackFailed(PlaybackFailure failure)
+    {
+        // Already moved on (a skip, a new queue) since this track failed.
+        if (_queue.CurrentTrack is not { } track || track.Id != failure.TrackId) return;
+
+        // A paused load that failed, such as the restored session opening offline, must not
+        // start skipping and playing on its own. Play retries it.
+        if (!failure.WasPlaying) return;
+
+        if (failure.ConsecutiveFailures >= MaxConsecutivePlaybackFailures)
+        {
+            ShowPlaybackMessage(_resourceLoader.GetString("Playback_RepeatedFailures"));
+            return;
+        }
+
+        ShowPlaybackMessage(string.Format(_resourceLoader.GetString(
+            _queue.Next() ? "Playback_TrackSkipped" : "Playback_TrackFailed"), track.Title));
+    }
+
+    private void ShowPlaybackMessage(string message)
+    {
+        if (_playbackMessageTimer is null)
+        {
+            _playbackMessageTimer = _uiQueue.CreateTimer();
+            _playbackMessageTimer.Interval = TimeSpan.FromSeconds(6);
+            _playbackMessageTimer.IsRepeating = false;
+            _playbackMessageTimer.Tick += (_, _) => PlaybackInfoBar.IsOpen = false;
+        }
+
+        PlaybackInfoBar.Message = message;
+        PlaybackInfoBar.IsOpen = true;
+        _playbackMessageTimer.Stop();
+        _playbackMessageTimer.Start();
     }
 
 
@@ -694,7 +795,10 @@ public sealed partial class MainWindow : Window
         if (PlaybackBar != null) PlaybackBar.IsQueueActive = _queuePanelVisible;
 
         if (_queuePanelVisible)
+        {
             QueuePanel.Refresh();
+            QueuePanel.ScrollToCurrent();
+        }
     }
 
 
@@ -729,7 +833,7 @@ public sealed partial class MainWindow : Window
 
         if (_lyricsVisible && _queue.CurrentTrack is not null)
         {
-            _ = LyricsPanel.LoadLyricsAsync(_queue.CurrentTrack.Id);
+            _ = LyricsPanel.LoadLyricsAsync(_queue.CurrentTrack);
         }
     }
 
@@ -740,7 +844,9 @@ public sealed partial class MainWindow : Window
         _scrobbleTrack = track;
         _scrobbleStartTime = DateTimeOffset.UtcNow;
         _scrobbleListenedTime = TimeSpan.Zero;
-        _scrobbleIsPlaying = true;
+        // Counting starts with ScrobbleResume. Starting it here counted the time a restored,
+        // paused session sat idle as listening.
+        _scrobbleIsPlaying = false;
     }
 
     private void ScrobblePause()
@@ -772,7 +878,12 @@ public sealed partial class MainWindow : Window
         if (_scrobbleIsPlaying)
             listened += DateTimeOffset.UtcNow - _scrobbleStartTime;
 
-        var duration = _playback.Duration;
+        // The track's own length. The player's duration may already be the next track's: after
+        // a gapless transition it has moved on before this runs, and a short track followed by
+        // a long one then missed the threshold and was never scrobbled.
+        var duration = _scrobbleTrack.DurationSeconds > 0
+            ? TimeSpan.FromSeconds(_scrobbleTrack.DurationSeconds)
+            : _playback.Duration;
 
         // Last.fm rules: track must be > 30s
         if (!forceScrobble && duration.TotalSeconds < 30) return;
@@ -827,5 +938,18 @@ public sealed partial class MainWindow : Window
 
     public void ShowTrayIcon() => _trayIcon.Show(this);
     public void HideTrayIcon() => _trayIcon.Remove();
+
+    /// <summary>
+    /// Brings the window back when Tid3 is launched again while running (see Program):
+    /// out of the tray, out of the taskbar if minimized, and to the front.
+    /// </summary>
+    public void BringToFront()
+    {
+        AppWindow.Show(true);
+        if (AppWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter
+            { State: Microsoft.UI.Windowing.OverlappedPresenterState.Minimized } presenter)
+            presenter.Restore();
+        Activate();
+    }
 
 }

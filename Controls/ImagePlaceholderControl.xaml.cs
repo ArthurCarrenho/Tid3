@@ -17,10 +17,24 @@ namespace TidalUi3.Controls
 
         private static void OnImageSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            if (d is ImagePlaceholderControl control)
-                control.ContentImage.Source = e.NewValue is string url && !string.IsNullOrEmpty(url)
-                    ? new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new System.Uri(url))
-                    : null;
+            if (d is not ImagePlaceholderControl control) return;
+
+            if (e.NewValue is not string url || string.IsNullOrEmpty(url))
+            {
+                control.ContentImage.Source = null;
+                return;
+            }
+
+            var bitmap = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage();
+            // Decode at the size shown when it is fixed. A 48 px row thumbnail otherwise keeps
+            // a full 160 px (or 320 px) bitmap in memory, for every visible row and card.
+            if (control.Width is > 0 and < double.PositiveInfinity)
+            {
+                bitmap.DecodePixelType = Microsoft.UI.Xaml.Media.Imaging.DecodePixelType.Logical;
+                bitmap.DecodePixelWidth = (int)System.Math.Ceiling(control.Width);
+            }
+            bitmap.UriSource = new System.Uri(url);
+            control.ContentImage.Source = bitmap;
         }
 
         public static readonly DependencyProperty FallbackGlyphProperty =

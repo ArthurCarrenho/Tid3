@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using TidalUi3.Models;
 using TidalUi3.Services;
 using TidalUi3.Helpers;
@@ -16,13 +18,28 @@ public sealed partial class LibraryPage : Page
 {
     private readonly TidalApiClient _api = App.ApiClient;
     private readonly QueueService _queue = App.Queue;
+    private readonly ObservableCollection<Track> _likedTracks = [];
+    private readonly HashSet<int> _likedTrackIds = [];
+    // Unliked while the list was still loading: a later page may still contain them.
+    private readonly HashSet<int> _unlikedTrackIds = [];
+    private readonly LoadingTrackListPlayer _player;
+    private readonly CancellationTokenSource _loadCts = new();
     private bool _loaded;
-    private List<Track>? _likedTracks;
 
     public LibraryPage()
     {
         InitializeComponent();
+        _player = new(_queue);
+        LikedSongsList.ItemsSource = _likedTracks;
         Loaded += LibraryPage_Loaded;
+        FavoritesService.TrackLikedChanged += OnTrackLikedChanged;
+
+        Unloaded += (_, _) =>
+        {
+            // Pages aren't cached, so once this one is gone nobody sees the rest of the list.
+            _loadCts.Cancel();
+            FavoritesService.TrackLikedChanged -= OnTrackLikedChanged;
+        };
     }
 
     // ─── Data Loading ──────────────────────────────────────────
@@ -37,13 +54,19 @@ public sealed partial class LibraryPage : Page
 
         LibraryLoading.IsLoading = true;
 
+        // The first page of liked songs comes in with the rest of the library. Later pages
+        // keep arriving after the overlay is gone, while the list can already be used.
+        _player.BeginLoading();
+        var likedPages = _api.GetFavoriteTrackPagesAsync(_loadCts.Token).GetAsyncEnumerator();
+        var gotFirstPage = false;
+
         try
         {
             var playlistsTask = _api.GetFavoritePlaylistsAsync(limit: 20);
             var albumsTask = _api.GetFavoriteAlbumsAsync(limit: 20);
-            var tracksTask = _api.GetFavoriteTracksAsync(limit: 50);
+            var tracksTask = likedPages.MoveNextAsync().AsTask();
 
-            await System.Threading.Tasks.Task.WhenAll(playlistsTask, albumsTask, tracksTask);
+            await Task.WhenAll(playlistsTask, albumsTask, tracksTask);
 
             // Playlists
             var playlists = await playlistsTask;
@@ -64,14 +87,9 @@ public sealed partial class LibraryPage : Page
             AlbumsCarousel.Visibility = albumItems.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
 
             // Liked Tracks
-            var tracks = await tracksTask;
-            var trackIndex = 1;
-            _likedTracks = tracks.Items
-                .Where(i => i.Item is not null)
-                .Select(i => MapTrack(i.Item!, trackIndex++))
-                .ToList();
-            LikedSongsList.ItemsSource = new ObservableCollection<Track>(_likedTracks);
-            LikedSongsSection.Visibility = _likedTracks.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            gotFirstPage = await tracksTask;
+            if (gotFirstPage)
+                AddLikedTracks(likedPages.Current);
         }
         catch
         {
@@ -83,7 +101,78 @@ public sealed partial class LibraryPage : Page
         {
             LibraryLoading.IsLoading = false;
         }
+
+        try
+        {
+            while (gotFirstPage && await likedPages.MoveNextAsync())
+                _player.OnPageLoaded(AddLikedTracks(likedPages.Current));
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            // Keep the songs that did arrive.
+            System.Diagnostics.Debug.WriteLine($"LibraryPage: loading more liked songs failed: {ex}");
+        }
+        finally
+        {
+            _player.Complete();
+            await likedPages.DisposeAsync();
+        }
     }
+
+    private List<Track> AddLikedTracks(IEnumerable<TidalTrackItem> items)
+    {
+        var added = new List<Track>();
+        foreach (var item in items)
+        {
+            // Liking a song while the list loads shifts the later pages by one, which would
+            // otherwise repeat the song at the page boundary.
+            if (item.Item is null || _unlikedTrackIds.Contains(item.Item.Id)
+                || !_likedTrackIds.Add(item.Item.Id)) continue;
+            var track = MapTrack(item.Item, _likedTracks.Count + 1);
+            _likedTracks.Add(track);
+            added.Add(track);
+        }
+
+        UpdateLikedSongsVisibility();
+        return added;
+    }
+
+    /// <summary>Keeps the list in step with likes made elsewhere: the playback bar, a context menu.</summary>
+    private void OnTrackLikedChanged(Track track, bool liked)
+    {
+        if (!_loaded) return;
+
+        if (liked)
+        {
+            _unlikedTrackIds.Remove(track.Id);
+            if (!_likedTrackIds.Add(track.Id)) return;
+
+            // Newest first, the order TIDAL lists them in.
+            var copy = track.Clone();
+            copy.IsLiked = true;
+            _likedTracks.Insert(0, copy);
+        }
+        else
+        {
+            _unlikedTrackIds.Add(track.Id);
+            if (!_likedTrackIds.Remove(track.Id)) return;
+
+            for (var i = 0; i < _likedTracks.Count; i++)
+            {
+                if (_likedTracks[i].Id != track.Id) continue;
+                _likedTracks.RemoveAt(i);
+                break;
+            }
+        }
+
+        for (var i = 0; i < _likedTracks.Count; i++)
+            _likedTracks[i].RowNumber = i + 1;
+        UpdateLikedSongsVisibility();
+    }
+
+    private void UpdateLikedSongsVisibility() =>
+        LikedSongsSection.Visibility = _likedTracks.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
 
     // ─── Click Handlers ────────────────────────────────────────
 
@@ -101,10 +190,10 @@ public sealed partial class LibraryPage : Page
 
     private void TrackItem_Click(object sender, ItemClickEventArgs e)
     {
-        if (e.ClickedItem is Track track && _likedTracks is not null)
+        if (e.ClickedItem is Track track)
         {
             var idx = _likedTracks.IndexOf(track);
-            _queue.PlayTracks(_likedTracks, idx >= 0 ? idx : 0);
+            _player.Play(_likedTracks, idx >= 0 ? idx : 0);
         }
     }
 
@@ -128,6 +217,7 @@ public sealed partial class LibraryPage : Page
             Id = a.Id,
             Title = a.Title,
             Artist = a.Artist?.Name ?? a.Artists.FirstOrDefault()?.Name ?? loader.GetString("Library_UnknownArtist"),
+            ArtistId = a.Artist?.Id ?? a.Artists.FirstOrDefault()?.Id ?? 0,
             Year = a.ReleaseDate?[..4] ?? "",
             CoverUrl = TidalApiClient.GetImageUrl(a.Cover, 320, 320)
         };

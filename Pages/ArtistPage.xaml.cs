@@ -204,10 +204,7 @@ public sealed partial class ArtistPage : Page
     private void ShuffleButton_Click(object sender, RoutedEventArgs e)
     {
         if (_topTracks is { Count: > 0 })
-        {
-            _queue.Shuffle = true;
-            _queue.PlayTracks(_topTracks, 0);
-        }
+            _queue.PlayShuffled(_topTracks);
     }
 
     private void TrackItem_Click(object sender, ItemClickEventArgs e)

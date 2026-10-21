@@ -20,7 +20,7 @@ public static class MediaCardContextMenu
         {
             if (source.DataContext is HomeSectionItem item)
             {
-                ShowForHomeSectionItem(item, source, e);
+                ShowForHomeSectionItem(item, source, e, frame);
                 return;
             }
             if (source.DataContext is Album album)
@@ -32,98 +32,60 @@ public static class MediaCardContextMenu
         }
     }
 
-    private static void ShowForHomeSectionItem(HomeSectionItem item, FrameworkElement source, RightTappedRoutedEventArgs e)
+    private static void ShowForHomeSectionItem(HomeSectionItem item, FrameworkElement source, RightTappedRoutedEventArgs e, Frame frame)
     {
-        var frame = FindFrame(source);
-        if (frame == null) return;
-
         var menu = new MenuFlyout();
 
         if (item.ItemType == "mix")
         {
-            menu.Items.Add(new MenuFlyoutItem
-            {
-                Text = "Open mix",
-                Icon = new FontIcon { Glyph = Glyphs.Play },
-                Command = new RelayCommand(() => frame.Navigate(typeof(PlaylistDetailPage), item.Id))
-            });
+            menu.Items.Add(CreateItem(Loc.Get("Menu_OpenMix"), Glyphs.Play,
+                () => frame.Navigate(typeof(PlaylistDetailPage), item.Id)));
         }
-        else if (item.ItemType == "album")
+        else if (item.ItemType == "album" && item.NumericId > 0)
         {
-            menu.Items.Add(new MenuFlyoutItem
-            {
-                Text = "Open album",
-                Icon = new FontIcon { Glyph = Glyphs.Album },
-                Command = new RelayCommand(() =>
-                {
-                    if (item.NumericId > 0)
-                        frame.Navigate(typeof(PlaylistDetailPage), item.NumericId);
-                })
-            });
+            menu.Items.Add(CreateItem(Loc.Get("Menu_OpenAlbum"), Glyphs.Album,
+                () => frame.Navigate(typeof(PlaylistDetailPage), item.NumericId)));
+
             if (item.ArtistId > 0 && !string.IsNullOrEmpty(item.Subtitle))
-            {
-                menu.Items.Add(new MenuFlyoutItem
-                {
-                    Text = $"Go to {item.Subtitle}",
-                    Icon = new FontIcon { Glyph = Glyphs.Artist },
-                    Command = new RelayCommand(() => frame.Navigate(typeof(ArtistPage), item.ArtistId))
-                });
-            }
+                menu.Items.Add(CreateItem(Loc.Format("Menu_GoTo", item.Subtitle), Glyphs.Artist,
+                    () => frame.Navigate(typeof(ArtistPage), item.ArtistId)));
         }
 
-        if (menu.Items.Count > 0)
-        {
-            menu.ShowAt(source, new Microsoft.UI.Xaml.Controls.Primitives.FlyoutShowOptions
-            {
-                Position = e.GetPosition(source)
-            });
-        }
+        ShowMenu(menu, source, e);
     }
 
     private static void ShowForAlbum(Album album, FrameworkElement source, RightTappedRoutedEventArgs e, Frame frame)
     {
         var menu = new MenuFlyout();
 
-        menu.Items.Add(new MenuFlyoutItem
-        {
-            Text = "Open album",
-            Icon = new FontIcon { Glyph = Glyphs.Album },
-            Command = new RelayCommand(() =>
-            {
-                if (album.Id > 0)
-                    frame.Navigate(typeof(PlaylistDetailPage), album.Id);
-            })
-        });
+        if (album.Id > 0)
+            menu.Items.Add(CreateItem(Loc.Get("Menu_OpenAlbum"), Glyphs.Album,
+                () => frame.Navigate(typeof(PlaylistDetailPage), album.Id)));
 
-        if (!string.IsNullOrEmpty(album.Artist))
-        {
-            menu.Items.Add(new MenuFlyoutItem
-            {
-                Text = $"Go to {album.Artist}",
-                Icon = new FontIcon { Glyph = Glyphs.Artist },
-                Command = new RelayCommand(() =>
-                {
-                    // Album model doesn't have ArtistId — navigate by name not possible
-                    // This is a placeholder for future enhancement
-                })
-            });
-        }
+        if (album.ArtistId > 0 && !string.IsNullOrEmpty(album.Artist))
+            menu.Items.Add(CreateItem(Loc.Format("Menu_GoTo", album.Artist), Glyphs.Artist,
+                () => frame.Navigate(typeof(ArtistPage), album.ArtistId)));
+
+        ShowMenu(menu, source, e);
+    }
+
+    private static MenuFlyoutItem CreateItem(string text, string glyph, System.Action action) => new()
+    {
+        Text = text,
+        Icon = new FontIcon { Glyph = glyph },
+        Command = new RelayCommand(action)
+    };
+
+    private static void ShowMenu(MenuFlyout menu, FrameworkElement source, RightTappedRoutedEventArgs e)
+    {
+        if (menu.Items.Count == 0) return;
 
         menu.ShowAt(source, new Microsoft.UI.Xaml.Controls.Primitives.FlyoutShowOptions
         {
             Position = e.GetPosition(source)
         });
-    }
 
-    private static Frame? FindFrame(DependencyObject element)
-    {
-        var current = element;
-        while (current != null)
-        {
-            if (current is Page page)
-                return page.Frame;
-            current = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(current);
-        }
-        return null;
+        // The card sits inside lists that have context menus of their own.
+        e.Handled = true;
     }
 }

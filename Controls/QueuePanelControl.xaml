@@ -57,6 +57,28 @@
                     </Button>
                 </Grid>
             </DataTemplate>
+
+            <!-- Section titles are rows of the same list (see QueueSection) -->
+            <DataTemplate x:Key="QueueHistoryHeaderTemplate">
+                <TextBlock x:Uid="QueueHistory" FontWeight="SemiBold" FontSize="14"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                           Margin="4,16,0,8" />
+            </DataTemplate>
+            <DataTemplate x:Key="QueueNowPlayingHeaderTemplate">
+                <TextBlock x:Uid="QueueNowPlaying" FontWeight="SemiBold" FontSize="14"
+                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                           Margin="4,16,0,8" />
+            </DataTemplate>
+            <DataTemplate x:Key="QueueUpNextHeaderTemplate">
+                <TextBlock x:Uid="QueueUpNext" FontWeight="SemiBold" FontSize="14"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                           Margin="4,16,0,8" />
+            </DataTemplate>
+            <controls:QueueRowTemplateSelector x:Key="QueueRowTemplateSelector"
+                TrackTemplate="{StaticResource QueueTrackTemplate}"
+                HistoryHeaderTemplate="{StaticResource QueueHistoryHeaderTemplate}"
+                NowPlayingHeaderTemplate="{StaticResource QueueNowPlayingHeaderTemplate}"
+                UpNextHeaderTemplate="{StaticResource QueueUpNextHeaderTemplate}" />
         </Grid.Resources>
 
         <!-- Header -->
@@ -83,50 +105,17 @@
         </Grid>
 
 
-        <!-- Separated Queue Lists -->
-        <ScrollViewer Grid.Row="1" x:Name="QueueScrollViewer" VerticalScrollBarVisibility="Auto">
-            <StackPanel Padding="4,4" Spacing="16" Margin="0,0,0,40">
-
-                <!-- History -->
-                <StackPanel x:Name="HistorySection">
-                    <TextBlock x:Uid="QueueHistory" FontWeight="SemiBold" FontSize="14"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                               Margin="4,0,0,8" />
-                    <ListView x:Name="HistoryListView"
-                              SelectionMode="None" IsItemClickEnabled="True"
-                              ItemClick="QueueListView_ItemClick"
-                              ItemTemplate="{StaticResource QueueTrackTemplate}"
-                              ScrollViewer.VerticalScrollMode="Disabled" />
-                </StackPanel>
-
-                <!-- Now Playing -->
-                <StackPanel x:Name="CurrentSection">
-                    <TextBlock x:Uid="QueueNowPlaying" FontWeight="SemiBold" FontSize="14"
-                               Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                               Margin="4,0,0,8" />
-                    <ListView x:Name="CurrentListView"
-                              SelectionMode="None" IsItemClickEnabled="True"
-                              ItemClick="QueueListView_ItemClick"
-                              ItemTemplate="{StaticResource QueueTrackTemplate}"
-                              ScrollViewer.VerticalScrollMode="Disabled" />
-                </StackPanel>
-
-                <!-- Up Next -->
-                <StackPanel x:Name="UpcomingSection">
-                    <TextBlock x:Uid="QueueUpNext" FontWeight="SemiBold" FontSize="14"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                               Margin="4,0,0,8" />
-                    <ListView x:Name="UpcomingListView"
-                              SelectionMode="None" IsItemClickEnabled="True"
-                              ItemClick="QueueListView_ItemClick"
-                              CanReorderItems="True" AllowDrop="True" CanDragItems="True"
-                              DragItemsCompleted="QueueListView_DragItemsCompleted"
-                              ItemTemplate="{StaticResource QueueTrackTemplate}"
-                              ScrollViewer.VerticalScrollMode="Disabled" />
-                </StackPanel>
-
-            </StackPanel>
-        </ScrollViewer>
+        <!-- History, Now playing and Up next in a single virtualized list: a queue from a
+             long playlist holds thousands of tracks, and only the visible rows get created. -->
+        <ListView Grid.Row="1" x:Name="QueueList"
+                  Padding="4,0,4,40"
+                  SelectionMode="None" IsItemClickEnabled="True"
+                  ItemClick="QueueListView_ItemClick"
+                  CanReorderItems="True" AllowDrop="True" CanDragItems="True"
+                  DragItemsStarting="QueueList_DragItemsStarting"
+                  DragItemsCompleted="QueueListView_DragItemsCompleted"
+                  ContainerContentChanging="QueueList_ContainerContentChanging"
+                  ItemTemplateSelector="{StaticResource QueueRowTemplateSelector}" />
 
         <!-- Empty Queue Message -->
         <controls:EmptyStateControl x:Name="EmptyQueueMessage" Grid.Row="1"

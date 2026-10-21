@@ -25,6 +25,10 @@ public sealed partial class LoginPage : Page
     {
         InitializeComponent();
 
+        // Navigating away mid-poll would otherwise leave the timers running and the
+        // token source undisposed.
+        Unloaded += (_, _) => StopTimers();
+
         _expiryTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _expiryTimer.Tick += ExpiryTimer_Tick;
 

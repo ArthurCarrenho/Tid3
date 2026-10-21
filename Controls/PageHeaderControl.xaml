@@ -62,6 +62,7 @@
             PlaceholderText="{x:Bind SearchPlaceholder, Mode=OneWay}"
             QueryIcon="Find"
             Width="320"
+            UpdateTextOnSelect="False"
             TextChanged="HeaderSearchBox_TextChanged"
             QuerySubmitted="HeaderSearchBox_QuerySubmitted"
             SuggestionChosen="HeaderSearchBox_SuggestionChosen"

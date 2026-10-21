@@ -10,12 +10,14 @@ namespace TidalUi3.Helpers;
 /// </summary>
 public static class TrackMapper
 {
+    private static readonly string UnknownArtist = Loc.Get("Library_UnknownArtist");
+
     public static Track Map(TidalTrack t, int index) => new()
     {
         Id = t.Id,
         RowNumber = index,
         Title = t.Title,
-        Artist = t.Artist?.Name ?? t.Artists.FirstOrDefault()?.Name ?? "Unknown",
+        Artist = t.Artist?.Name ?? t.Artists.FirstOrDefault()?.Name ?? UnknownArtist,
         Album = t.Album?.Title ?? "",
         AlbumId = t.Album?.Id ?? 0,
         ArtistId = t.Artist?.Id ?? t.Artists.FirstOrDefault()?.Id ?? 0,

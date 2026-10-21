@@ -67,7 +67,7 @@ public sealed partial class SearchResultsPage : Page
                     {
                         NumericId = a.Id,
                         Title = a.Title,
-                        Subtitle = a.Artist?.Name ?? a.Artists.FirstOrDefault()?.Name ?? "Unknown",
+                        Subtitle = a.Artist?.Name ?? a.Artists.FirstOrDefault()?.Name ?? _resourceLoader.GetString("Library_UnknownArtist"),
                         CoverUrl = TidalApiClient.GetImageUrl(a.Cover, 320, 320),
                         ItemType = "album"
                     }));

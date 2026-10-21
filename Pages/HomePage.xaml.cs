@@ -24,15 +24,39 @@ public sealed partial class HomePage : Page
         Loaded += HomePage_Loaded;
     }
 
-    private async void HomePage_Loaded(object sender, RoutedEventArgs e)
+    private void HomePage_Loaded(object sender, RoutedEventArgs e)
     {
         if (_loaded) return;
         _loaded = true;
 
+        if (_api.IsAuthenticated)
+        {
+            LoadSections();
+            return;
+        }
+
+        // On a first sign-in this page loads behind the login screen, before there is a token,
+        // and used to stay empty afterwards. Fill it in as soon as the sign-in completes.
+        _api.TokenChanged += OnSignedIn;
+        Unloaded += (_, _) => _api.TokenChanged -= OnSignedIn;
+    }
+
+    private void OnSignedIn(string accessToken, string? refreshToken, int userId, string countryCode)
+    {
+        _api.TokenChanged -= OnSignedIn;
+        DispatcherQueue.TryEnqueue(LoadSections);
+    }
+
+    private void RetryButton_Click(object sender, RoutedEventArgs e) => LoadSections();
+
+    private async void LoadSections()
+    {
         if (!_api.IsAuthenticated)
             return;
 
+        LoadErrorPanel.Visibility = Visibility.Collapsed;
         HomeLoading.IsLoading = true;
+        _sections.Clear();
 
         try
         {
@@ -96,6 +120,8 @@ public sealed partial class HomePage : Page
         finally
         {
             HomeLoading.IsLoading = false;
+            if (_sections.Count == 0)
+                LoadErrorPanel.Visibility = Visibility.Visible;
         }
     }
 

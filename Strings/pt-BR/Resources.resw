@@ -241,4 +241,38 @@
   <data name="PlaybackBar_Devices_SyncDisconnected" xml:space="preserve">
     <value>Sincronização desconectada</value>
   </data>
+  <data name="Playback_TrackSkipped" xml:space="preserve">
+    <value>Não foi possível tocar “{0}”, então ela foi pulada.</value>
+  </data>
+  <data name="Playback_TrackFailed" xml:space="preserve">
+    <value>Não foi possível tocar “{0}”.</value>
+  </data>
+  <data name="Playback_RepeatedFailures" xml:space="preserve">
+    <value>Várias faixas seguidas não puderam ser tocadas, então a reprodução parou. Verifique sua conexão e aperte play para tentar de novo.</value>
+  </data>
+  <data name="Menu_Play" xml:space="preserve"><value>Tocar</value></data>
+  <data name="Menu_PlayNext" xml:space="preserve"><value>Tocar em seguida</value></data>
+  <data name="Menu_AddToQueue" xml:space="preserve"><value>Adicionar à fila</value></data>
+  <data name="Menu_Like" xml:space="preserve"><value>Adicionar às curtidas</value></data>
+  <data name="Menu_Unlike" xml:space="preserve"><value>Remover das curtidas</value></data>
+  <data name="Menu_GoToAlbum" xml:space="preserve"><value>Ir para o álbum</value></data>
+  <data name="Menu_GoToArtist" xml:space="preserve"><value>Ir para o artista</value></data>
+  <data name="Menu_GoToRadio" xml:space="preserve"><value>Ir para a rádio da faixa</value></data>
+  <data name="Menu_OpenMix" xml:space="preserve"><value>Abrir mix</value></data>
+  <data name="Menu_OpenAlbum" xml:space="preserve"><value>Abrir álbum</value></data>
+  <data name="Menu_GoTo" xml:space="preserve"><value>Ir para {0}</value></data>
+  <data name="Search_SuggestionTrack" xml:space="preserve"><value>Música · {0}</value></data>
+  <data name="Search_SuggestionAlbum" xml:space="preserve"><value>Álbum · {0}</value></data>
+  <data name="Search_SuggestionArtist" xml:space="preserve"><value>Artista</value></data>
+  <data name="Sidebar_Playlists" xml:space="preserve"><value>Playlists</value></data>
+  <data name="StreamInfo_Title" xml:space="preserve"><value>Informações do stream</value></data>
+  <data name="StreamInfo_Quality" xml:space="preserve"><value>Qualidade: {0}</value></data>
+  <data name="StreamInfo_Codec" xml:space="preserve"><value>Codec: {0}</value></data>
+  <data name="StreamInfo_Type" xml:space="preserve"><value>Tipo: {0}</value></data>
+  <data name="StreamInfo_Format" xml:space="preserve"><value>Formato: {0}</value></data>
+  <data name="Common_UnknownError" xml:space="preserve"><value>Erro desconhecido</value></data>
+  <data name="HomeLoadError.Title" xml:space="preserve"><value>Não foi possível carregar o início</value></data>
+  <data name="HomeLoadError.Description" xml:space="preserve"><value>Verifique sua conexão e tente de novo.</value></data>
+  <data name="HomeLoadError_Retry.Content" xml:space="preserve"><value>Tentar de novo</value></data>
+  <data name="Lyrics_Instrumental" xml:space="preserve"><value>Faixa instrumental, sem letra</value></data>
 </root>

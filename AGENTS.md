@@ -41,7 +41,8 @@ TidalUi3 is a **Windows desktop music streaming client** for TIDAL, built with *
 ```
 TidalUi3/
 ├── App.xaml              # Application resources and converters
-├── App.xaml.cs           # App entry point, global services initialization
+├── App.xaml.cs           # Global services initialization
+├── Program.cs            # Entry point: single instance (DISABLE_XAML_GENERATED_MAIN)
 ├── MainWindow.xaml       # Main window layout (NavigationView + PlaybackBar)
 ├── MainWindow.xaml.cs    # Navigation, search, playback coordination
 ├── Package.appxmanifest  # MSIX package manifest
@@ -61,7 +62,6 @@ TidalUi3/
 │
 ├── Converters/           # XAML value converters
 │   ├── BoolToVisibilityConverter.cs
-│   ├── QualityColorConverter.cs
 │   └── ... (5 more)
 │
 ├── Helpers/              # Utility helpers
@@ -100,36 +100,79 @@ TidalUi3/
 
 ### Prerequisites
 - Windows 10 version 2004 (build 19041) or later
-- Visual Studio 2022 with Windows App SDK workload
-- .NET 8.0 SDK
+- .NET 8.0 SDK (x64) - pinned by `global.json`
+- Developer Mode enabled (required to register the app locally without signing)
 
-### Build Commands
+**Visual Studio is not required.** The WinUI 3 toolchain is restored from NuGet:
+`Microsoft.WindowsAppSDK` supplies the XAML compiler and MSIX build targets, and
+`Microsoft.Windows.SDK.BuildTools` supplies `makeappx`, `makepri` and `signtool`.
+No separate Windows SDK install is needed either.
+
+### build.ps1 (preferred)
+
+`build.ps1` at the repo root wraps every workflow. Add `-Platform x86|arm64` to target
+another architecture (default `x64`).
+
+```powershell
+.\build.ps1 dev          # build Debug, register AppX layout, launch  (fast inner loop)
+.\build.ps1 build        # build only
+.\build.ps1 run          # launch the already-registered package
+.\build.ps1 msix         # publish Release -> signed .msix in packages/
+.\build.ps1 unregister   # remove the registered package
+.\build.ps1 clean        # delete bin/, obj/, packages/
+```
+
+`dev` registers the loose build output via `Add-AppxPackage -Register`, which needs no
+MSIX packing and no signing. This is the same mechanism behind Visual Studio's F5.
+
+Before registering, `dev` syncs the output folder against `TidalUi3.build.appxrecipe`.
+This is required: `dotnet build` does not copy `<Content>` items (everything under
+`Assets/`) into the output folder, because MSIX packaging reads them straight from source
+via `GetPackagingOutputs`. Since `-Register` treats the output folder as the package root,
+skipping the sync installs the app **without any icons**. The recipe is the authoritative
+list of package contents, so the sync also covers non-asset files such as
+`Microsoft.Web.WebView2.Core.winmd`.
+
+`msix` generates a self-signed dev certificate at `build/Tid3_Dev.pfx` on first run
+(gitignored). Set `TID3_CERT_PFX` / `TID3_CERT_PASSWORD` to sign with a real certificate.
+
+### Raw dotnet commands
 
 ```powershell
 # Restore packages
 dotnet restore
 
 # Build Debug (x64)
-dotnet build --configuration Debug --platform x64
+dotnet build -c Debug -p:Platform=x64 -p:RuntimeIdentifier=win-x64
 
 # Build Release (x64)
-dotnet build --configuration Release --platform x64
+dotnet build -c Release -p:Platform=x64 -p:RuntimeIdentifier=win-x64
 
-# Build for all platforms
-dotnet build --configuration Release
-
-# Run the application
-dotnet run --configuration Debug
-
-# Create MSIX package (requires single-project packaging)
-dotnet publish --configuration Release --platform x64
+# Produce a signed MSIX (same parameters the release workflow uses)
+dotnet publish TidalUi3.csproj -c Release -p:Platform=x64 -p:RuntimeIdentifier=win-x64 `
+  -p:PackageCertificateKeyFile=build/Tid3_Dev.pfx -p:PackageCertificatePassword=tid3build `
+  -p:AppxPackageDir=packages/x64/ -p:UapAppxPackageBuildMode=SideloadOnly `
+  -p:AppxBundle=Never -p:GenerateAppxPackageOnBuild=true
 ```
 
-### Visual Studio
-1. Open `TidalUi3.sln`
-2. Set startup project to `TidalUi3`
-3. Select target platform (x64 recommended)
-4. Press F5 to debug
+> The app depends on package identity (`ApplicationData.Current` in `SettingsService`,
+> `TokenStorageService`, `SessionStorageService`, `ImageCacheService`; `Package.Current`
+> and `StartupTask` in `SettingsPage`). Unpackaged builds (`WindowsPackageType=None`)
+> compile but crash at runtime, so the packaged path is mandatory.
+
+### Editors
+
+- **VS Code**: `.vscode/tasks.json` exposes the build.ps1 tasks; `.vscode/launch.json`
+  provides attach configurations. Debug by running the `dev` task, then attaching to
+  `TidalUi3.exe` - the app must be shell-activated to keep package identity, so launching
+  the `.exe` directly from the debugger does not work.
+- **Visual Studio**: open `TidalUi3.sln`, set platform to x64, press F5. Only VS offers
+  XAML Hot Reload and the visual XAML designer.
+
+### Releases
+
+`.github/workflows/release.yml` runs `dotnet publish` only - no Visual Studio steps.
+Pushing a `v*.*.*` tag builds x64/x86/arm64 MSIX packages and opens a draft release.
 
 ---
 
@@ -175,7 +218,7 @@ Central HTTP client for TIDAL API (`api.tidalhifi.com/v1/`).
 - `GetForYouPageAsync()` - Personalized home content
 - `SearchAsync()` / `SearchTopHitsAsync()` - Search
 - `GetPlaybackInfoAsync()` - Stream URLs (supports HI_RES_LOSSLESS)
-- `GetTrackLyricsAsync()` - Lyrics via Triton proxy
+- `GetTrackLyricsAsync()` - TIDAL's own lyrics (refused for most client ids; `LyricsService` uses it as a last resort)
 - `GetFavoritePlaylistsAsync()` - User's playlists
 
 ### PlaybackService
@@ -195,7 +238,8 @@ Manages playback queue state.
 - Auto-play radio when queue ends (configurable)
 
 ### Storage Services
-- **TokenStorageService**: OAuth tokens in `LocalSettings`
+- **TokenStorageService**: OAuth tokens encrypted per Windows user (`DataProtectionProvider`)
+  in `LocalState\tidal_session.dat`; migrates the old plain-text `LocalSettings` keys once
 - **SessionStorageService**: Encrypted playback state in `LocalCacheFolder`
 - **SettingsService**: App preferences
 
@@ -260,22 +304,27 @@ DASH manifests (XML) are handled separately from JSON manifests for Hi-Res conte
 | For You | `/pages/for_you` |
 | Mixes | `/pages/mix` |
 | Radio | `/tracks/{id}/radio` |
-| Lyrics | `triton.squid.wtf/lyrics/` (third-party) |
+| Lyrics | `LyricsService`: LRCLIB `lrclib.net/api/get`, then `/api/search` (by duration), then `/tracks/{id}/lyrics` |
 
 ---
 
 ## Error Handling
 
-- Global exception logging to `Logs/exceptions.log`
-- First-chance exception filter for Socket/IOException noise
-- API errors written to `api_err.txt` and `json_err.txt` for debugging
+- All logging goes through `Helpers/AppLog` into `Logs/` next to the app (the build output
+  when registered with `build.ps1 dev`), or `LocalState\Logs` when that folder is read-only
+  (installed MSIX). Each file rolls over to `.old` past 5 MB.
+- `exceptions.log`: unhandled and unobserved exceptions, playback errors. Debug builds also log
+  every first-chance exception except cancellations and socket noise.
+- `playtrace.log` (TEMP-DIAG): queue/gapless trace from `PlaybackService`, Debug builds only.
+- A track that fails to play raises `PlaybackService.PlaybackFailed`; `MainWindow` skips it
+  and shows an InfoBar, stopping after 3 failures in a row.
 - Graceful degradation (empty states, loading spinners)
 
 ---
 
 ## Security Considerations
 
-- OAuth tokens stored in Windows `LocalSettings`
+- OAuth tokens encrypted for the current Windows user in `LocalState\tidal_session.dat`
 - Session state encrypted with `DataProtectionProvider`
 - Client credentials embedded in App.xaml.cs (dev-only, should be externalized)
 - TLS for all API communications
@@ -324,8 +373,10 @@ The app uses **single-project MSIX packaging**:
 
 | Issue | Solution |
 |-------|----------|
-| Build errors about Windows SDK | Install Windows App SDK via VS Installer |
+| Build errors about Windows SDK | Run `dotnet restore` - the SDK build tools come from the `Microsoft.Windows.SDK.BuildTools` NuGet package |
+| `dotnet build` says no SDK / wrong SDK | Install the .NET 8 SDK (x64); `global.json` pins the build to 8.0.1xx+ |
+| `Add-AppxPackage -Register` fails | Enable Developer Mode in Settings > System > For developers |
 | Playback fails | Check `api_err.txt` for stream URL issues |
-| Auth loops | Clear `LocalSettings` or delete session |
+| Auth loops | Delete `LocalState\tidal_session.dat` (or sign out in Settings) |
 | UI not updating | Verify `DispatcherQueue.TryEnqueue()` usage |
-| Lyrics not loading | Triton service may be unavailable |
+| Lyrics not loading | LRCLIB is community-run and sometimes answers 503; misses during an outage aren't cached, so the next play retries |
