@@ -190,12 +190,15 @@ public sealed partial class SettingsPage : Page
     private async void SyncServerBox_LostFocus(object sender, RoutedEventArgs e)
     {
         if (_isLoading) return;
-        if (SettingsService.SyncServerUrl == SyncServerBox.Text) return;
+        var url = SyncServerBox.Text.Trim();
+        if (SettingsService.SyncServerUrl == url) return;
 
-        SettingsService.SyncServerUrl = SyncServerBox.Text;
+        SettingsService.SyncServerUrl = url;
         if (SettingsService.SyncEnabled)
         {
-            await UpdateSyncConnectionAsync();
+            // Still connected to the old server otherwise: ConnectAsync is a no-op while a
+            // connection is open, so the new address only took effect after a restart.
+            await UpdateSyncConnectionAsync(reconnect: true);
         }
     }
 
@@ -247,10 +250,13 @@ public sealed partial class SettingsPage : Page
         }
     }
 
-    private async Task UpdateSyncConnectionAsync()
+    private async Task UpdateSyncConnectionAsync(bool reconnect = false)
     {
         var sync = App.MainWindow?.Sync;
         if (sync == null) return;
+
+        if (reconnect)
+            sync.Disconnect();
 
         SyncProgressRing.IsActive = true;
         SyncCardStatusText.Text = _rl.GetString("SettingsIntegrations_CloudSync_Testing");
@@ -319,7 +325,7 @@ public sealed partial class SettingsPage : Page
             LastFmConnectButtonText.Text = _rl.GetString("SettingsIntegrations_LastFm_Connect/Text");
             LastFmStatusText.Text = hasCredentials
                 ? _rl.GetString("SettingsIntegrations_LastFm_Status/Text")
-                : "Enter API credentials below";
+                : _rl.GetString("SettingsIntegrations_LastFm_NeedCredentials");
         }
     }
 

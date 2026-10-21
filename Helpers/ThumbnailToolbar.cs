@@ -76,6 +76,10 @@ public sealed class ThumbnailToolbar : IDisposable
     private IntPtr _hwnd;
     private bool _buttonsAdded;
 
+    // Last state passed to UpdatePlayPauseIcon. The buttons are built again whenever Explorer
+    // restarts, and used to come back showing "play" while music kept playing.
+    private bool _isPlaying;
+
     // Button images are supplied as icon handles (THB_ICON) rather than through an image
     // list. The image list path rendered blank buttons: the glyphs draw correctly, but an
     // ILC_MASK list derives a 1-bit mask from the icon produced by Bitmap.GetHicon, which
@@ -139,11 +143,15 @@ public sealed class ThumbnailToolbar : IDisposable
 
             _taskbar.HrInit();
 
+            // Runs again after an Explorer restart; the handles from the previous run would
+            // otherwise leak.
+            DestroyIcons();
+
             var iconSize = IconPixelSize();
 
-            _prevIcon = CreateIconFromGlyph("\uE892", iconSize);      // Previous
-            _playPauseIcon = CreateIconFromGlyph("\uE768", iconSize); // Play
-            _nextIcon = CreateIconFromGlyph("\uE893", iconSize);      // Next
+            _prevIcon = CreateIconFromGlyph("\uE892", iconSize);                                // Previous
+            _playPauseIcon = CreateIconFromGlyph(_isPlaying ? "\uE769" : "\uE768", iconSize);  // Pause or Play
+            _nextIcon = CreateIconFromGlyph("\uE893", iconSize);                                // Next
 
             if (_prevIcon == IntPtr.Zero || _playPauseIcon == IntPtr.Zero || _nextIcon == IntPtr.Zero)
                 return;
@@ -152,9 +160,9 @@ public sealed class ThumbnailToolbar : IDisposable
             // the tooltips were being filled in and then ignored.
             var buttons = new THUMBBUTTON[]
             {
-                new() { dwMask = THB_ICON | THB_TOOLTIP | THB_FLAGS, iId = BtnPrevious, hIcon = _prevIcon, dwFlags = THBF_ENABLED, szTip = "Previous" },
-                new() { dwMask = THB_ICON | THB_TOOLTIP | THB_FLAGS, iId = BtnPlayPause, hIcon = _playPauseIcon, dwFlags = THBF_ENABLED, szTip = "Play/Pause" },
-                new() { dwMask = THB_ICON | THB_TOOLTIP | THB_FLAGS, iId = BtnNext, hIcon = _nextIcon, dwFlags = THBF_ENABLED, szTip = "Next" },
+                new() { dwMask = THB_ICON | THB_TOOLTIP | THB_FLAGS, iId = BtnPrevious, hIcon = _prevIcon, dwFlags = THBF_ENABLED, szTip = Loc.Get("Thumb_Previous") },
+                new() { dwMask = THB_ICON | THB_TOOLTIP | THB_FLAGS, iId = BtnPlayPause, hIcon = _playPauseIcon, dwFlags = THBF_ENABLED, szTip = PlayPauseTip() },
+                new() { dwMask = THB_ICON | THB_TOOLTIP | THB_FLAGS, iId = BtnNext, hIcon = _nextIcon, dwFlags = THBF_ENABLED, szTip = Loc.Get("Thumb_Next") },
             };
 
             _taskbar.ThumbBarAddButtons(_hwnd, 3, buttons);
@@ -169,7 +177,9 @@ public sealed class ThumbnailToolbar : IDisposable
     }
 
     /// <summary>Releases the icon handles backing the taskbar buttons.</summary>
-    public void Dispose()
+    public void Dispose() => DestroyIcons();
+
+    private void DestroyIcons()
     {
         foreach (var icon in new[] { _prevIcon, _playPauseIcon, _nextIcon })
         {
@@ -178,8 +188,11 @@ public sealed class ThumbnailToolbar : IDisposable
         _prevIcon = _playPauseIcon = _nextIcon = IntPtr.Zero;
     }
 
+    private string PlayPauseTip() => Loc.Get(_isPlaying ? "Transport_Pause" : "Transport_Play");
+
     public void UpdatePlayPauseIcon(bool isPlaying)
     {
+        _isPlaying = isPlaying;
         if (!_buttonsAdded || _taskbar == null) return;
 
         try
@@ -189,7 +202,7 @@ public sealed class ThumbnailToolbar : IDisposable
 
             var buttons = new THUMBBUTTON[]
             {
-                new() { dwMask = THB_ICON | THB_TOOLTIP | THB_FLAGS, iId = BtnPlayPause, hIcon = icon, dwFlags = THBF_ENABLED, szTip = isPlaying ? "Pause" : "Play" },
+                new() { dwMask = THB_ICON | THB_TOOLTIP | THB_FLAGS, iId = BtnPlayPause, hIcon = icon, dwFlags = THBF_ENABLED, szTip = PlayPauseTip() },
             };
             _taskbar.ThumbBarUpdateButtons(_hwnd, 1, buttons);
 

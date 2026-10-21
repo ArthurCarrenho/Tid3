@@ -309,4 +309,9 @@
   <data name="LoginStatus_StartFailed" xml:space="preserve"><value>Não foi possível iniciar o login. Verifique sua conexão e gere um novo código.</value></data>
   <data name="LoginStatus_Retrying" xml:space="preserve"><value>Conexão perdida. Ainda aguardando o login…</value></data>
   <data name="LoginStatus_Failed" xml:space="preserve"><value>O login falhou: {0}</value></data>
+  <data name="SettingsIntegrations_LastFm_NeedCredentials" xml:space="preserve"><value>Informe suas credenciais de API abaixo</value></data>
+  <data name="Tray_Show" xml:space="preserve"><value>Mostrar o Tid3</value></data>
+  <data name="Tray_Quit" xml:space="preserve"><value>Sair</value></data>
+  <data name="Thumb_Previous" xml:space="preserve"><value>Anterior</value></data>
+  <data name="Thumb_Next" xml:space="preserve"><value>Próxima</value></data>
 </root>

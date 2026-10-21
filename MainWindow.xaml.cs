@@ -93,10 +93,7 @@ public sealed partial class MainWindow : Window
         if (SettingsService.MinimizeToTray)
             _trayIcon.Show(this);
 
-        _trayIcon.ShowRequested += () => _uiQueue.TryEnqueue(() =>
-        {
-            AppWindow.Show(true);
-        });
+        _trayIcon.ShowRequested += () => _uiQueue.TryEnqueue(BringToFront);
         _trayIcon.QuitRequested += () => _uiQueue.TryEnqueue(() =>
         {
             _forceClose = true;
@@ -646,7 +643,11 @@ public sealed partial class MainWindow : Window
 
         if (track is not null)
         {
-            _uiQueue.TryEnqueue(() => Title = $"{track.Title} — {track.Artist} | Tid3");
+            _uiQueue.TryEnqueue(() =>
+            {
+                Title = $"{track.Title} — {track.Artist} | Tid3";
+                _trayIcon.SetToolTip($"{track.Title} — {track.Artist}");
+            });
 
             // Track before loading: listening time only starts counting with PlaybackStarted,
             // which the load raises once audio plays (or the user does, for a paused load).
@@ -687,6 +688,7 @@ public sealed partial class MainWindow : Window
             _uiQueue.TryEnqueue(() =>
             {
                 Title = "Tid3";
+                _trayIcon.SetToolTip("Tid3");
                 LyricsPanel.ClearLyrics();
             });
         }

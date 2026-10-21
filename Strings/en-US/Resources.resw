@@ -308,4 +308,9 @@
   <data name="LoginStatus_StartFailed" xml:space="preserve"><value>Couldn't start the sign-in. Check your connection and get a new code.</value></data>
   <data name="LoginStatus_Retrying" xml:space="preserve"><value>Connection lost. Still waiting for the sign-in…</value></data>
   <data name="LoginStatus_Failed" xml:space="preserve"><value>Sign-in failed: {0}</value></data>
+  <data name="SettingsIntegrations_LastFm_NeedCredentials" xml:space="preserve"><value>Enter your API credentials below</value></data>
+  <data name="Tray_Show" xml:space="preserve"><value>Show Tid3</value></data>
+  <data name="Tray_Quit" xml:space="preserve"><value>Quit</value></data>
+  <data name="Thumb_Previous" xml:space="preserve"><value>Previous</value></data>
+  <data name="Thumb_Next" xml:space="preserve"><value>Next</value></data>
 </root>

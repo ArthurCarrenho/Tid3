@@ -15,7 +15,12 @@ public sealed class TrayIconHelper : IDisposable
     private const int NIF_TIP = 0x04;
     private const int NIF_MESSAGE = 0x01;
     private const int NIM_ADD = 0x00;
+    private const int NIM_MODIFY = 0x01;
     private const int NIM_DELETE = 0x02;
+
+    // szTip holds 128 characters including the terminator.
+    private const int MaxTipLength = 127;
+    private const int SM_CXSMICON = 49;
 
     private const int TPM_RIGHTALIGN = 0x08;
     private const int TPM_BOTTOMALIGN = 0x20;
@@ -67,6 +72,15 @@ public sealed class TrayIconHelper : IDisposable
     [DllImport("user32.dll")]
     private static extern bool SetForegroundWindow(IntPtr hWnd);
 
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern uint RegisterWindowMessage(string lpString);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetDpiForWindow(IntPtr hwnd);
+
+    [DllImport("user32.dll")]
+    private static extern int GetSystemMetricsForDpi(int nIndex, uint dpi);
+
     [DllImport("comctl32.dll")]
     private static extern bool SetWindowSubclass(IntPtr hWnd, SUBCLASSPROC pfnSubclass, uint uIdSubclass, IntPtr dwRefData);
 
@@ -84,7 +98,12 @@ public sealed class TrayIconHelper : IDisposable
     private IntPtr _hwnd;
     private IntPtr _hIcon;
     private bool _iconAdded;
+    private string _tip = "Tid3";
     private readonly SUBCLASSPROC _subclassProc;
+
+    // Broadcast when Explorer (re)starts. Every tray icon is gone by then and has to be added
+    // again; without that, a window hidden in the tray could no longer be brought back.
+    private readonly uint _taskbarCreatedMsg = RegisterWindowMessage("TaskbarCreated");
 
     public event Action? ShowRequested;
     public event Action? QuitRequested;
@@ -100,27 +119,46 @@ public sealed class TrayIconHelper : IDisposable
 
         _hwnd = WindowNative.GetWindowHandle(window);
 
-        // Load the app icon
+        // The small-icon size for this window's DPI: a fixed 16 px came out blurry on scaled
+        // displays. Tid3.ico carries several sizes and LoadImage picks the closest one.
+        var dpi = GetDpiForWindow(_hwnd);
+        var size = GetSystemMetricsForDpi(SM_CXSMICON, dpi == 0 ? 96 : dpi);
+        if (size <= 0) size = 16;
         _hIcon = LoadImage(IntPtr.Zero,
             System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "Tid3.ico"),
-            1 /* IMAGE_ICON */, 16, 16, 0x10 /* LR_LOADFROMFILE */);
+            1 /* IMAGE_ICON */, size, size, 0x10 /* LR_LOADFROMFILE */);
 
-        var nid = new NOTIFYICONDATA
-        {
-            cbSize = Marshal.SizeOf<NOTIFYICONDATA>(),
-            hWnd = _hwnd,
-            uID = 1,
-            uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE,
-            uCallbackMessage = WM_TRAYICON,
-            hIcon = _hIcon,
-            szTip = "Tid3"
-        };
-
-        Shell_NotifyIcon(NIM_ADD, ref nid);
-        _iconAdded = true;
-
+        AddIcon();
         SetWindowSubclass(_hwnd, _subclassProc, 2, IntPtr.Zero);
     }
+
+    /// <summary>Text shown when hovering the tray icon, such as the track playing.</summary>
+    public void SetToolTip(string text)
+    {
+        _tip = text.Length > MaxTipLength ? text[..(MaxTipLength - 1)] + "…" : text;
+        if (!_iconAdded) return;
+
+        var nid = CreateData(NIF_TIP);
+        Shell_NotifyIcon(NIM_MODIFY, ref nid);
+    }
+
+    private void AddIcon()
+    {
+        var nid = CreateData(NIF_ICON | NIF_TIP | NIF_MESSAGE);
+        Shell_NotifyIcon(NIM_ADD, ref nid);
+        _iconAdded = true;
+    }
+
+    private NOTIFYICONDATA CreateData(int flags) => new()
+    {
+        cbSize = Marshal.SizeOf<NOTIFYICONDATA>(),
+        hWnd = _hwnd,
+        uID = 1,
+        uFlags = flags,
+        uCallbackMessage = WM_TRAYICON,
+        hIcon = _hIcon,
+        szTip = _tip
+    };
 
     public void Remove()
     {
@@ -144,6 +182,9 @@ public sealed class TrayIconHelper : IDisposable
 
     private IntPtr SubclassWndProc(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam, uint uIdSubclass, IntPtr dwRefData)
     {
+        if (_taskbarCreatedMsg != 0 && uMsg == _taskbarCreatedMsg && _iconAdded)
+            AddIcon();
+
         if (uMsg == WM_TRAYICON)
         {
             var msg = lParam.ToInt32() & 0xFFFF;
@@ -164,9 +205,9 @@ public sealed class TrayIconHelper : IDisposable
     private void ShowContextMenu()
     {
         var hMenu = CreatePopupMenu();
-        AppendMenu(hMenu, MF_STRING, CMD_SHOW, "Show Tid3");
+        AppendMenu(hMenu, MF_STRING, CMD_SHOW, Loc.Get("Tray_Show"));
         AppendMenu(hMenu, MF_SEPARATOR, 0, "");
-        AppendMenu(hMenu, MF_STRING, CMD_QUIT, "Quit");
+        AppendMenu(hMenu, MF_STRING, CMD_QUIT, Loc.Get("Tray_Quit"));
 
         GetCursorPos(out var pt);
         SetForegroundWindow(_hwnd);
