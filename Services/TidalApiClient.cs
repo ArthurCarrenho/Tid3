@@ -692,7 +692,9 @@ public sealed class TidalApiClient : IDisposable
             {
                 response = await SendAuthorizedAsync(() => new HttpRequestMessage(HttpMethod.Get, relativeUrl), ct);
             }
-            catch (HttpRequestException) when (attempt < MaxGetAttempts && !ct.IsCancellationRequested)
+            // Network failures only. One with a status code comes from a token refresh that
+            // TIDAL rejected, and repeating the request would just be refused again.
+            catch (HttpRequestException ex) when (ex.StatusCode is null && attempt < MaxGetAttempts && !ct.IsCancellationRequested)
             {
                 await Task.Delay(GetRetryDelay(attempt, null), ct);
                 continue;

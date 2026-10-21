@@ -23,6 +23,9 @@ namespace TidalUi3.Controls
         private bool _isDraggingProgress;
         private double _volumeBeforeMute = 0.75;
 
+        // Applies PlaybackService.IsBuffering to the loading ring after a delay, see OnBufferingChanged.
+        private Microsoft.UI.Dispatching.DispatcherQueueTimer? _loadingRingTimer;
+
         public event EventHandler? QueueButtonClicked;
         public event EventHandler? LyricsButtonClicked;
 
@@ -48,8 +51,10 @@ namespace TidalUi3.Controls
             _playback.PlaybackStarted += OnPlaybackStarted;
             _playback.PlaybackPaused += OnPlaybackPaused;
             _playback.VolumeChanged += OnVolumeChanged;
+            _playback.BufferingChanged += OnBufferingChanged;
 
             VolumeControl.Volume = _playback.Volume * 100;
+            TransportControls.IsLoading = _playback.IsBuffering;
             UpdateNowPlaying(_queue.CurrentTrack);
             UpdateQualityUI(_playback.CurrentQuality);
             UpdateTransportState();
@@ -163,6 +168,8 @@ namespace TidalUi3.Controls
             _playback.PlaybackStarted -= OnPlaybackStarted;
             _playback.PlaybackPaused -= OnPlaybackPaused;
             _playback.VolumeChanged -= OnVolumeChanged;
+            _playback.BufferingChanged -= OnBufferingChanged;
+            _loadingRingTimer?.Stop();
 
             var main = App.MainWindow;
             if (main?.Sync != null)
@@ -201,6 +208,26 @@ namespace TidalUi3.Controls
 
         private void OnPlaybackStarted() => _uiQueue.TryEnqueue(() => TransportControls.IsPlaying = true);
         private void OnPlaybackPaused() => _uiQueue.TryEnqueue(() => TransportControls.IsPlaying = false);
+
+        /// <summary>
+        /// Shows the ring only once loading has gone on for a moment, so a fast load or the
+        /// brief buffering of a gapless switch doesn't flash it. Hiding waits a little too:
+        /// between fetching the stream and the player opening it, buffering drops for an
+        /// instant, and the ring would blink off and on.
+        /// </summary>
+        private void OnBufferingChanged(bool buffering)
+        {
+            if (_loadingRingTimer is null)
+            {
+                _loadingRingTimer = _uiQueue.CreateTimer();
+                _loadingRingTimer.IsRepeating = false;
+                _loadingRingTimer.Tick += (_, _) => TransportControls.IsLoading = _playback.IsBuffering;
+            }
+
+            _loadingRingTimer.Stop();
+            _loadingRingTimer.Interval = TimeSpan.FromMilliseconds(buffering ? 400 : 150);
+            _loadingRingTimer.Start();
+        }
 
         private void UpdateQualityUI(string quality)
         {

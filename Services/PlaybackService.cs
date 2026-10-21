@@ -64,6 +64,16 @@ public sealed class PlaybackService : IDisposable
     /// decides whether to skip; <see cref="Play"/> retries the track.
     /// </summary>
     public event Action<PlaybackFailure>? PlaybackFailed;
+
+    /// <summary>
+    /// True while playback was asked for but no audio is coming out yet: the track's stream
+    /// is being fetched, or the player is opening or buffering it.
+    /// </summary>
+    public bool IsBuffering { get; private set; }
+
+    /// <summary>Raised on the UI thread when <see cref="IsBuffering"/> changes.</summary>
+    public event Action<bool>? BufferingChanged;
+
     public event Action? SmtcNext;
     public event Action? SmtcPrevious;
 
@@ -97,6 +107,8 @@ public sealed class PlaybackService : IDisposable
     // its stream URL expired during a long pause, is worth reloading; one that never opened is not.
     private bool _currentItemOpened;
     private int _currentTrackId;
+    // PlayTrackAsync is still fetching the stream (playback info, manifest).
+    private bool _isFetchingTrack;
     // The current track could not be loaded, so Play has to load it again.
     private bool _loadFailed;
     private bool _wantsToPlay;
@@ -146,6 +158,7 @@ public sealed class PlaybackService : IDisposable
         _player.CommandManager.PreviousReceived += (_, _) => SmtcPrevious?.Invoke();
         _player.MediaEnded += OnMediaEnded;
         _player.MediaFailed += OnMediaFailed;
+        _player.PlaybackSession.PlaybackStateChanged += OnPlaybackStateChanged;
         _player.Volume = 0.75;
     }
 
@@ -167,14 +180,17 @@ public sealed class PlaybackService : IDisposable
         // Cancel any previous PlayTrackAsync still awaiting (rapid skipping)
         _playTrackCts?.Cancel();
         _playTrackCts?.Dispose();
-        _playTrackCts = new CancellationTokenSource();
-        var playCt = _playTrackCts.Token;
+        var playCts = new CancellationTokenSource();
+        _playTrackCts = playCts;
+        var playCt = playCts.Token;
 
         _loadFailed = false;
         _wantsToPlay = autoPlay;
         _currentItem = null;
         _currentItemOpened = false;
         Interlocked.Exchange(ref _lastPositionTicks, startPosition.Ticks);
+        _isFetchingTrack = true;
+        UpdateBuffering();
 
         try
         {
@@ -272,6 +288,15 @@ public sealed class PlaybackService : IDisposable
             CurrentQuality = "";
             ReportFailure(trackId, _wantsToPlay);
         }
+        finally
+        {
+            // A load superseded by a newer one finishing late must not clear the newer's flag.
+            if (ReferenceEquals(_playTrackCts, playCts))
+            {
+                _isFetchingTrack = false;
+                UpdateBuffering();
+            }
+        }
     }
 
     private static async Task<MediaSource> CreateDashSourceAsync(string dashXml, CancellationToken ct)
@@ -314,6 +339,7 @@ public sealed class PlaybackService : IDisposable
         }
 
         _wantsToPlay = true;
+        UpdateBuffering();
 
         // Still loading: the player holds the previous track until the new audio is in, and
         // playing it now would resume that one. PlayTrackAsync starts playback when done.
@@ -331,9 +357,13 @@ public sealed class PlaybackService : IDisposable
     public void Pause()
     {
         _wantsToPlay = false;
-        Interlocked.Exchange(ref _lastPositionTicks, Position.Ticks);
+        // Only while the current track is the one loaded: during a load the player still holds
+        // the previous track, and its position would become the retry point of the new one.
+        if (_isTrackReady)
+            Interlocked.Exchange(ref _lastPositionTicks, Position.Ticks);
         _player.Pause();
         StopPositionTimer();
+        UpdateBuffering();
         PlaybackPaused?.Invoke();
     }
 
@@ -343,10 +373,12 @@ public sealed class PlaybackService : IDisposable
         _playTrackCts?.Cancel();
         InvalidateGaplessPreload();
         _isTrackReady = false;
+        _isFetchingTrack = false;
         _loadFailed = false;
         _wantsToPlay = false;
         _currentItem = null;
         Interlocked.Increment(ref _playbackGeneration);
+        UpdateBuffering();
 
         _player.Pause();
         // Detach the old audio so the media keys can't resume a track that left the queue.
@@ -731,12 +763,33 @@ public sealed class PlaybackService : IDisposable
         _wantsToPlay = false;
         _consecutiveFailures++;
         StopPositionTimer();
+        UpdateBuffering();
         PlaybackPaused?.Invoke();
 
         // Deferred: this can run inside a queue change (a load that fails at once), and a
         // handler that skips would then change the queue again from within that change.
         var failure = new PlaybackFailure(trackId, wasPlaying, _consecutiveFailures);
         App.MainWindow?.DispatcherQueue.TryEnqueue(() => PlaybackFailed?.Invoke(failure));
+    }
+
+    // ── Buffering indicator ──
+
+    private void OnPlaybackStateChanged(MediaPlaybackSession sender, object args)
+        => App.MainWindow?.DispatcherQueue.TryEnqueue(UpdateBuffering);
+
+    /// <summary>
+    /// Recomputes <see cref="IsBuffering"/>. Only counts while playback is wanted: a session
+    /// restored paused loads its track too, but nobody is waiting on it.
+    /// </summary>
+    private void UpdateBuffering()
+    {
+        var state = _player.PlaybackSession.PlaybackState;
+        var buffering = _wantsToPlay && (_isFetchingTrack
+            || (_isTrackReady && state is MediaPlaybackState.Opening or MediaPlaybackState.Buffering));
+
+        if (buffering == IsBuffering) return;
+        IsBuffering = buffering;
+        BufferingChanged?.Invoke(buffering);
     }
 
     private void StartPositionTimer()
@@ -771,6 +824,7 @@ public sealed class PlaybackService : IDisposable
         Unsubscribe(_playbackList);
         _player.MediaEnded -= OnMediaEnded;
         _player.MediaFailed -= OnMediaFailed;
+        _player.PlaybackSession.PlaybackStateChanged -= OnPlaybackStateChanged;
         StopPositionTimer();
         _playTrackCts?.Cancel();
         _playTrackCts?.Dispose();

@@ -18,6 +18,10 @@ namespace TidalUi3.Controls
             DependencyProperty.Register("IsPlaying", typeof(bool), typeof(TransportControls),
                 new PropertyMetadata(false, OnIsPlayingChanged));
 
+        public static readonly DependencyProperty IsLoadingProperty =
+            DependencyProperty.Register("IsLoading", typeof(bool), typeof(TransportControls),
+                new PropertyMetadata(false, OnIsLoadingChanged));
+
         public static readonly DependencyProperty IsShuffledProperty =
             DependencyProperty.Register("IsShuffled", typeof(bool), typeof(TransportControls),
                 new PropertyMetadata(false, OnIsShuffledChanged));
@@ -30,6 +34,13 @@ namespace TidalUi3.Controls
         {
             get => (bool)GetValue(IsPlayingProperty);
             set => SetValue(IsPlayingProperty, value);
+        }
+
+        /// <summary>Shows a ring around play/pause: playback was asked for but hasn't started yet.</summary>
+        public bool IsLoading
+        {
+            get => (bool)GetValue(IsLoadingProperty);
+            set => SetValue(IsLoadingProperty, value);
         }
 
         public bool IsShuffled
@@ -56,6 +67,12 @@ namespace TidalUi3.Controls
             {
                 control.PlayPauseIcon.Glyph = control.IsPlaying ? Glyphs.Pause : Glyphs.Play;
             }
+        }
+
+        private static void OnIsLoadingChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (d is TransportControls control)
+                control.LoadingRing.IsActive = (bool)e.NewValue;
         }
 
         private static void OnIsShuffledChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)

@@ -22,14 +22,19 @@
                 ToolTipService.ToolTip="Previous">
             <FontIcon Glyph="&#xE892;" FontSize="18" />
         </Button>
-        <Button x:Name="PlayPauseButton" Width="48" Height="48"
-                CornerRadius="24" Padding="0" BorderThickness="0"
-                Click="PlayPauseButton_Click"
-                Background="#00000000"
-                ToolTipService.ToolTip="Play / Pause">
-            <FontIcon x:Name="PlayPauseIcon" Glyph="&#xE768;"
-                      FontSize="22" Foreground="White" />
-        </Button>
+        <Grid Width="48" Height="48">
+            <Button x:Name="PlayPauseButton" Width="48" Height="48"
+                    CornerRadius="24" Padding="0" BorderThickness="0"
+                    Click="PlayPauseButton_Click"
+                    Background="#00000000"
+                    ToolTipService.ToolTip="Play / Pause">
+                <FontIcon x:Name="PlayPauseIcon" Glyph="&#xE768;"
+                          FontSize="22" Foreground="White" />
+            </Button>
+            <!-- Spins around the button while a track loads or buffers (see IsLoading) -->
+            <ProgressRing x:Name="LoadingRing" Width="48" Height="48"
+                          IsActive="False" IsHitTestVisible="False" />
+        </Grid>
         <Button x:Name="NextButton" Style="{StaticResource SubtleButtonStyle}"
                 Width="38" Height="38" Padding="4"
                 Click="NextButton_Click"
