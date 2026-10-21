@@ -52,6 +52,8 @@ namespace TidalUi3.Controls
 
         private void UpdateVolumeIcon()
         {
+            Loc.Label(MuteButton, Loc.Get(IsMuted ? "Volume_Unmute" : "Volume_Mute"));
+
             if (IsMuted || Volume == 0)
             {
                 VolumeIcon.Glyph = Glyphs.VolumeMute;

@@ -15,7 +15,7 @@
             <FontIcon x:Name="VolumeIcon" Glyph="&#xE767;" FontSize="14"
                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
         </Button>
-        <Slider x:Name="VolumeSlider" Value="75" Maximum="100"
+        <Slider x:Name="VolumeSlider" x:Uid="Volume_Slider" Value="75" Maximum="100"
                 Width="90" VerticalAlignment="Center"
                 ValueChanged="VolumeSlider_ValueChanged" />
     </StackPanel>

@@ -152,11 +152,18 @@ the same mechanism Visual Studio's F5 uses under the hood.
 | `.\build.ps1 dev` | Build Debug, register the AppX layout, launch |
 | `.\build.ps1 build` | Build only |
 | `.\build.ps1 run` | Launch the already-registered package |
+| `.\build.ps1 install` | Build Release, copy it to `%LOCALAPPDATA%\Programs\Tid3` and register it from there (keeps sign-in and queue) |
 | `.\build.ps1 msix` | Publish Release and produce a signed `.msix` in `packages/` |
 | `.\build.ps1 unregister` | Remove the registered package |
 | `.\build.ps1 clean` | Delete `bin/`, `obj/`, `packages/` |
 
 Add `-Platform x86` or `-Platform arm64` to target another architecture (default is `x64`).
+
+**Tests**
+
+```powershell
+dotnet test tests/TidalUi3.Tests
+```
 
 `.\build.ps1 msix` generates a self-signed development certificate at `build/Tid3_Dev.pfx`
 on first run. To sign with a real certificate instead, set `TID3_CERT_PFX` and

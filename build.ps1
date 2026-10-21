@@ -12,19 +12,24 @@
                   This is the fast inner loop: no MSIX packing, no signing.
       build       Build only, no register/launch.
       run         Launch the currently registered package.
+      install     Build Release, copy it to %LOCALAPPDATA%\Programs\Tid3 and register
+                  it from there: an install that no longer depends on bin\. Keeps the
+                  app data (sign-in, queue, settings). 'dev' and 'install' share the
+                  package identity, so whichever ran last is the registered one.
       msix        Publish Release and produce a signed .msix under packages\.
-      unregister  Remove the registered package from this user.
+      unregister  Remove the registered package from this user (and its app data).
       clean       Delete bin\, obj\ and packages\.
 
 .EXAMPLE
     .\build.ps1 dev
     .\build.ps1 dev -Platform arm64
+    .\build.ps1 install
     .\build.ps1 msix -Platform x64
 #>
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('dev', 'build', 'run', 'msix', 'unregister', 'clean')]
+    [ValidateSet('dev', 'build', 'run', 'install', 'msix', 'unregister', 'clean')]
     [string]$Task = 'dev',
 
     [ValidateSet('x64', 'x86', 'arm64')]
@@ -39,12 +44,13 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$Root    = $PSScriptRoot
-$Project = Join-Path $Root 'TidalUi3.csproj'
-$Rid     = @{ 'x64' = 'win-x64'; 'x86' = 'win-x86'; 'arm64' = 'win-arm64' }[$Platform]
+$Root       = $PSScriptRoot
+$Project    = Join-Path $Root 'TidalUi3.csproj'
+$Rid        = @{ 'x64' = 'win-x64'; 'x86' = 'win-x86'; 'arm64' = 'win-arm64' }[$Platform]
+$InstallDir = Join-Path $env:LOCALAPPDATA 'Programs\Tid3'
 
 if (-not $Configuration) {
-    $Configuration = if ($Task -eq 'msix') { 'Release' } else { 'Debug' }
+    $Configuration = if ($Task -in 'msix', 'install') { 'Release' } else { 'Debug' }
 }
 
 function Write-Step($message) {
@@ -84,13 +90,13 @@ function Get-InstalledPackage {
     Get-AppxPackage -Name $identityName -ErrorAction SilentlyContinue
 }
 
-function Stop-RunningApp {
-    # O pacote registrado roda direto de bin\, entao uma instancia aberta trava o
-    # TidalUi3.exe e o build falha com MSB3021/MSB3027. So encerra instancias que
-    # rodam a partir deste repositorio -- uma versao instalada via MSIX fica intacta.
-    $binRoot = Join-Path $Root 'bin'
+function Stop-RunningApp([string]$fromDir = (Join-Path $Root 'bin')) {
+    # O pacote registrado roda direto da pasta do layout, entao uma instancia aberta trava
+    # o TidalUi3.exe: o build falha com MSB3021/MSB3027 e a copia do 'install' tambem.
+    # So encerra instancias que rodam a partir de $fromDir -- uma versao instalada via
+    # MSIX fica intacta.
     $procs = @(Get-Process -Name 'TidalUi3' -ErrorAction SilentlyContinue |
-               Where-Object { $_.Path -and $_.Path.StartsWith($binRoot, [StringComparison]::OrdinalIgnoreCase) })
+               Where-Object { $_.Path -and $_.Path.StartsWith($fromDir, [StringComparison]::OrdinalIgnoreCase) })
 
     foreach ($proc in $procs) {
         Write-Step "Encerrando Tid3 em execucao (PID $($proc.Id)) para liberar o executavel"
@@ -148,7 +154,8 @@ function Sync-AppxLayout($manifestPath) {
     if ($copied) { Write-Step "Layout sincronizado pelo appxrecipe ($copied arquivo(s))" }
 }
 
-function Invoke-Register {
+function Get-AppxLayout {
+    # Caminho do AppxManifest.xml do layout solto do build atual, gerando-o se preciso.
     $layout = Find-AppxLayout
 
     if (-not $layout) {
@@ -174,25 +181,61 @@ function Invoke-Register {
     }
 
     Sync-AppxLayout $layout
+    return $layout
+}
 
-    Write-Step "Registrando layout solto: $layout"
+function Register-Layout($manifestPath) {
+    $layoutRoot = Split-Path $manifestPath -Parent
+
+    # Registrar a mesma versao a partir de outra pasta e ignorado em silencio: o pacote
+    # continuaria rodando da pasta antiga (por exemplo, o 'install' em vez do bin\Debug
+    # que o 'dev' acabou de compilar). Para trocar de pasta e preciso desregistrar antes.
+    $pkg = Get-InstalledPackage
+    if ($pkg -and -not [string]::Equals($pkg.InstallLocation.TrimEnd('\'), $layoutRoot.TrimEnd('\'), [StringComparison]::OrdinalIgnoreCase)) {
+        Write-Step "Trocando o registro de $($pkg.InstallLocation) para $layoutRoot"
+        Invoke-Unregister -PreserveData
+    }
+
+    Write-Step "Registrando layout solto: $manifestPath"
     # -Register instala a partir dos arquivos soltos: sem empacotar MSIX e sem
     # assinatura. Exige Developer Mode ligado (Configuracoes > Sistema > Para
     # desenvolvedores). E o mesmo caminho que o F5 do Visual Studio usa por baixo.
     try
     {
-        Add-AppxPackage -Register $layout -ForceUpdateFromAnyVersion -ForceApplicationShutdown -ErrorAction Stop
+        Add-AppxPackage -Register $manifestPath -ForceUpdateFromAnyVersion -ForceApplicationShutdown -ErrorAction Stop
     }
     catch
     {
         # 0x80073CFB: mesma versao ja registrada e o registro novo nao e aceito como
         # atualizacao. Acontece sempre que o Package.appxmanifest muda de forma
         # estrutural (extensoes, capabilities) sem subir a versao. Desregistrar e
-        # registrar de novo resolve, e nao custa nada em desenvolvimento.
+        # registrar de novo resolve; os dados do app (login, fila) sao preservados.
         Write-Warning "Registro recusado ($($_.Exception.Message.Split([Environment]::NewLine)[0])). Desregistrando e tentando de novo."
-        Invoke-Unregister
-        Add-AppxPackage -Register $layout -ForceUpdateFromAnyVersion -ForceApplicationShutdown
+        Invoke-Unregister -PreserveData
+        Add-AppxPackage -Register $manifestPath -ForceUpdateFromAnyVersion -ForceApplicationShutdown
     }
+}
+
+function Invoke-Register {
+    Register-Layout (Get-AppxLayout)
+}
+
+function Invoke-Install {
+    # Build Release copiado para uma pasta propria e registrado de la, para que o app
+    # instalado nao dependa de bin\ (que o 'clean' apaga e todo build reescreve).
+    Invoke-Build
+    $layoutRoot = Split-Path (Get-AppxLayout) -Parent
+
+    Stop-RunningApp $InstallDir
+    Write-Step "Copiando para $InstallDir"
+    # /XD Logs: os logs do app instalado ficam na pasta dele e sobrevivem a atualizacao.
+    & robocopy $layoutRoot $InstallDir /MIR /XD Logs /R:1 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
+    # robocopy: 0-7 sao sucesso (1 = copiou, 2 = removeu sobras, ...); 8+ e falha.
+    if ($LASTEXITCODE -ge 8) { throw "robocopy falhou (exit $LASTEXITCODE)." }
+    $global:LASTEXITCODE = 0
+
+    Register-Layout (Join-Path $InstallDir 'AppxManifest.xml')
+    Write-Host "Instalado em $InstallDir" -ForegroundColor Green
 }
 
 function Invoke-Launch {
@@ -312,14 +355,20 @@ function Invoke-Msix {
     Write-Host 'em LocalMachine\TrustedPeople.' -ForegroundColor DarkGray
 }
 
-function Invoke-Unregister {
+function Invoke-Unregister([switch]$PreserveData) {
     $pkg = Get-InstalledPackage
     if (-not $pkg) {
         Write-Host 'Nenhum pacote Tid3 registrado.' -ForegroundColor DarkGray
         return
     }
     Write-Step "Removendo $($pkg.PackageFullName)"
-    Remove-AppxPackage -Package $pkg.PackageFullName
+    # -PreserveApplicationData mantem LocalState/Settings (login, fila, configuracoes) para o
+    # proximo registro. So vale para pacotes registrados de pasta solta (modo dev).
+    if ($PreserveData -and $pkg.IsDevelopmentMode) {
+        Remove-AppxPackage -Package $pkg.PackageFullName -PreserveApplicationData
+    } else {
+        Remove-AppxPackage -Package $pkg.PackageFullName
+    }
 }
 
 function Invoke-Clean {
@@ -340,6 +389,7 @@ switch ($Task) {
     }
     'build'      { Invoke-Build }
     'run'        { Invoke-Launch }
+    'install'    { Invoke-Install }
     'msix'       { Invoke-Msix }
     'unregister' { Invoke-Unregister }
     'clean'      { Invoke-Clean }

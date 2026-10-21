@@ -19,7 +19,7 @@
         <TextBlock Text="{Binding ArtistName, ElementName=Root}" HorizontalAlignment="Center"
                    Style="{StaticResource BodyStrongTextBlockStyle}"
                    TextTrimming="CharacterEllipsis" MaxLines="1" />
-        <TextBlock Text="Artist" HorizontalAlignment="Center"
+        <TextBlock x:Uid="ArtistCard_Label" Text="Artist" HorizontalAlignment="Center"
                    Style="{StaticResource CaptionTextBlockStyle}"
                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
     </StackPanel>

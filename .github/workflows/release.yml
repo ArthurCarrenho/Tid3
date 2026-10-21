@@ -31,6 +31,12 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
+      # Once is enough: the tests cover platform-independent logic (queue, lyrics parsing).
+      - name: Run tests
+        if: matrix.platform == 'x64'
+        shell: pwsh
+        run: dotnet test tests/TidalUi3.Tests -c Release
+
       - name: Detect certificate secret
         id: certdetect
         shell: pwsh

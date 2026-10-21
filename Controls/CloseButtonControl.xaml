@@ -10,7 +10,6 @@
 
     <Button x:Name="InnerButton" Width="28" Height="28" Padding="0"
             Background="Transparent" BorderThickness="0" CornerRadius="14"
-            ToolTipService.ToolTip="Close"
             Click="OnButtonClick">
         <FontIcon Glyph="&#xE711;" FontSize="12" />
     </Button>

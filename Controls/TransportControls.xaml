@@ -12,6 +12,7 @@
         <Button x:Name="ShuffleButton" Style="{StaticResource SubtleButtonStyle}"
                 Width="38" Height="38" Padding="4"
                 Click="ShuffleButton_Click"
+                x:Uid="Transport_Shuffle"
                 ToolTipService.ToolTip="Shuffle">
             <FontIcon x:Name="ShuffleIcon" Glyph="&#xE8B1;" FontSize="16"
                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -19,6 +20,7 @@
         <Button x:Name="PreviousButton" Style="{StaticResource SubtleButtonStyle}"
                 Width="38" Height="38" Padding="4"
                 Click="PreviousButton_Click"
+                x:Uid="Transport_Previous"
                 ToolTipService.ToolTip="Previous">
             <FontIcon Glyph="&#xE892;" FontSize="18" />
         </Button>
@@ -26,8 +28,7 @@
             <Button x:Name="PlayPauseButton" Width="48" Height="48"
                     CornerRadius="24" Padding="0" BorderThickness="0"
                     Click="PlayPauseButton_Click"
-                    Background="#00000000"
-                    ToolTipService.ToolTip="Play / Pause">
+                    Background="#00000000">
                 <FontIcon x:Name="PlayPauseIcon" Glyph="&#xE768;"
                           FontSize="22" Foreground="White" />
             </Button>
@@ -38,12 +39,14 @@
         <Button x:Name="NextButton" Style="{StaticResource SubtleButtonStyle}"
                 Width="38" Height="38" Padding="4"
                 Click="NextButton_Click"
+                x:Uid="Transport_Next"
                 ToolTipService.ToolTip="Next">
             <FontIcon Glyph="&#xE893;" FontSize="18" />
         </Button>
         <Button x:Name="RepeatButton" Style="{StaticResource SubtleButtonStyle}"
                 Width="38" Height="38" Padding="4"
                 Click="RepeatButton_Click"
+                x:Uid="Transport_Repeat"
                 ToolTipService.ToolTip="Repeat">
             <FontIcon x:Name="RepeatIcon" Glyph="&#xE8EE;" FontSize="16"
                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />

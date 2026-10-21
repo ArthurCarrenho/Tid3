@@ -381,6 +381,7 @@ namespace TidalUi3.Controls
         private void UpdateLikeVisual()
         {
             var isLiked = _queue.CurrentTrack is { } track && FavoritesService.IsTrackLiked(track.Id);
+            Loc.Label(LikeButton, Loc.Get(isLiked ? "Menu_Unlike" : "Menu_Like"));
             LikeIcon.Glyph = isLiked ? Glyphs.LikeFilled : Glyphs.Like;
             LikeIcon.Foreground = isLiked
                 ? new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(255, 233, 30, 99))

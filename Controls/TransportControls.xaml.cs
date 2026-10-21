@@ -64,9 +64,7 @@ namespace TidalUi3.Controls
         private static void OnIsPlayingChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             if (d is TransportControls control)
-            {
-                control.PlayPauseIcon.Glyph = control.IsPlaying ? Glyphs.Pause : Glyphs.Play;
-            }
+                control.UpdatePlayPause();
         }
 
         private static void OnIsLoadingChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -113,6 +111,13 @@ namespace TidalUi3.Controls
         public TransportControls()
         {
             this.InitializeComponent();
+            UpdatePlayPause();
+        }
+
+        private void UpdatePlayPause()
+        {
+            PlayPauseIcon.Glyph = IsPlaying ? Glyphs.Pause : Glyphs.Play;
+            Loc.Label(PlayPauseButton, Loc.Get(IsPlaying ? "Transport_Pause" : "Transport_Play"));
         }
 
         private void ShuffleButton_Click(object sender, RoutedEventArgs e) => ShuffleClick?.Invoke(this, e);

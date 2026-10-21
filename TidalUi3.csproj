@@ -16,6 +16,8 @@
     <Nullable>enable</Nullable>
     <!-- Program.cs has its own Main, which keeps the app to a single instance. -->
     <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+    <!-- The test project lives under the app's folder; keep its sources out of the app. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);tests\**</DefaultItemExcludes>
   </PropertyGroup>
   <ItemGroup>
     <Page Remove="Pages\LoginPage.xaml" />

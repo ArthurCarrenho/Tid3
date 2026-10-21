@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml.Controls;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using TidalUi3.Helpers;
 using TidalUi3.Services;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.ApplicationModel.Resources;
@@ -73,20 +74,33 @@ public sealed partial class LoginPage : Page
         catch (Exception ex)
         {
             SetLoading(false);
-            ShowError($"Failed to start auth: {ex.Message}");
+            AppLog.Exception("LoginStartError", ex);
+            // The refresh button stays available, so the user can just try again.
+            ShowError(_rl.GetString("LoginStatus_StartFailed"));
         }
     }
 
+    // A poll can take longer than the poll interval on a slow connection. Overlapping polls
+    // used to race: once one succeeded, another one, cancelled by that success, replaced the
+    // success message with an error.
+    private bool _isPolling;
+
     private async void PollTimer_Tick(object? sender, object e)
     {
-        if (_deviceCode is null || _pollCts is null)
+        if (_deviceCode is null || _pollCts is null || _isPolling)
             return;
 
+        var ct = _pollCts.Token;
+        _isPolling = true;
         try
         {
-            var token = await _api.PollDeviceTokenAsync(_deviceCode, _pollCts.Token);
+            var token = await _api.PollDeviceTokenAsync(_deviceCode, ct);
             if (token is null)
-                return; // still pending
+            {
+                // Still pending. Clears a "connection lost" note from an earlier poll.
+                StatusText.Text = _rl.GetString("LoginStatus_Waiting");
+                return;
+            }
 
             // Authorized
             StopTimers();
@@ -95,6 +109,10 @@ public sealed partial class LoginPage : Page
 
             await Task.Delay(800);
             LoginCompleted?.Invoke(this, EventArgs.Empty);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            // Polling stopped (success, expiry, new code); nothing to report.
         }
         catch (InvalidOperationException)
         {
@@ -107,12 +125,35 @@ public sealed partial class LoginPage : Page
             StopTimers();
             ShowError(_rl.GetString("LoginStatus_Denied"));
         }
+        catch (Exception ex) when (IsConnectionProblem(ex))
+        {
+            // A dropped connection or a timeout. The code is still valid until it expires,
+            // so keep polling instead of making the user start over.
+            StatusText.Text = _rl.GetString("LoginStatus_Retrying");
+        }
         catch (Exception ex)
         {
             StopTimers();
-            ShowError($"Error: {ex.Message}");
+            AppLog.Exception("LoginPollError", ex);
+            ShowError(string.Format(_rl.GetString("LoginStatus_Failed"), ex.Message));
+        }
+        finally
+        {
+            _isPolling = false;
         }
     }
+
+    // Network-level failures carry the socket error inside, or an HttpRequestError other than
+    // Unknown. The token endpoint's own error responses are thrown without either.
+    private static bool IsConnectionProblem(Exception ex) => ex switch
+    {
+        OperationCanceledException => true, // HTTP timeout; real cancellation is handled above
+        System.Net.Http.HttpRequestException http =>
+            http.InnerException is not null || http.HttpRequestError != System.Net.Http.HttpRequestError.Unknown,
+        // A gateway error page (HTML from a 502/503) instead of the endpoint's JSON.
+        System.Text.Json.JsonException => true,
+        _ => false
+    };
 
     private void ExpiryTimer_Tick(object? sender, object e)
     {

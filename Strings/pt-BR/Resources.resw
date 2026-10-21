@@ -104,7 +104,8 @@
 
   <!-- Queue Panel -->
   <data name="QueueHeader.Text" xml:space="preserve"><value>Fila</value></data>
-  <data name="QueueClearButton.ToolTipService.ToolTip" xml:space="preserve"><value>Limpar Fila</value></data>
+  <data name="QueueClearButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Limpar Fila</value></data>
+  <data name="QueueClearButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Limpar Fila</value></data>
   <data name="QueueCloseButton.ToolTipText" xml:space="preserve"><value>Fechar Fila</value></data>
   <data name="QueueHistory.Text" xml:space="preserve"><value>Histórico</value></data>
   <data name="QueueNowPlaying.Text" xml:space="preserve"><value>Tocando agora</value></data>
@@ -113,7 +114,8 @@
   <data name="QueueContext_GoToArtist.Text" xml:space="preserve"><value>Ir para Artista</value></data>
   <data name="QueueContext_GoToAlbum.Text" xml:space="preserve"><value>Ir para Álbum</value></data>
   <data name="QueueContext_Remove.Text" xml:space="preserve"><value>Remover da Fila</value></data>
-  <data name="QueueRemoveButton.ToolTipService.ToolTip" xml:space="preserve"><value>Remover</value></data>
+  <data name="QueueRemoveButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Remover</value></data>
+  <data name="QueueRemoveButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Remover</value></data>
 
   <!-- Lyrics Panel -->
   <data name="LyricsHeader.Text" xml:space="preserve"><value>Letras</value></data>
@@ -123,15 +125,17 @@
   <!-- Playback Bar -->
   <data name="PlaybackBar_Context_GoToArtist.Text" xml:space="preserve"><value>Ir para Artista</value></data>
   <data name="PlaybackBar_Context_GoToAlbum.Text" xml:space="preserve"><value>Ir para Álbum</value></data>
-  <data name="PlaybackBar_Like.ToolTipService.ToolTip" xml:space="preserve"><value>Curtir</value></data>
-  <data name="PlaybackBar_Devices.ToolTipService.ToolTip" xml:space="preserve"><value>Conectar a um dispositivo</value></data>
+  <data name="PlaybackBar_Devices.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Conectar a um dispositivo</value></data>
+  <data name="PlaybackBar_Devices.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Conectar a um dispositivo</value></data>
   <data name="PlaybackBar_Devices_Header.Text" xml:space="preserve"><value>Conectar a um dispositivo</value></data>
   <data name="PlaybackBar_Devices_None.Visibility" xml:space="preserve"><value>Visible</value></data>
   <data name="PlaybackBar_Devices_None.Text" xml:space="preserve"><value>Nenhum outro dispositivo ativo encontrado.</value></data>
   <data name="PlaybackBar_Devices_ActiveNow.Text" xml:space="preserve"><value>Ativo agora</value></data>
   <data name="PlaybackBar_Devices_SyncSettings.Content" xml:space="preserve"><value>Configurações de Sincronização</value></data>
-  <data name="PlaybackBar_Lyrics.ToolTipService.ToolTip" xml:space="preserve"><value>Letras</value></data>
-  <data name="PlaybackBar_Queue.ToolTipService.ToolTip" xml:space="preserve"><value>Fila</value></data>
+  <data name="PlaybackBar_Lyrics.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Letras</value></data>
+  <data name="PlaybackBar_Lyrics.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Letras</value></data>
+  <data name="PlaybackBar_Queue.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Fila</value></data>
+  <data name="PlaybackBar_Queue.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Fila</value></data>
 
   <!-- Search -->
   <data name="SearchBox_Placeholder.PlaceholderText" xml:space="preserve"><value>O que você quer ouvir?</value></data>
@@ -275,4 +279,34 @@
   <data name="HomeLoadError.Description" xml:space="preserve"><value>Verifique sua conexão e tente de novo.</value></data>
   <data name="HomeLoadError_Retry.Content" xml:space="preserve"><value>Tentar de novo</value></data>
   <data name="Lyrics_Instrumental" xml:space="preserve"><value>Faixa instrumental, sem letra</value></data>
+  <data name="Header_Back.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Voltar</value></data>
+  <data name="Header_Back.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Voltar</value></data>
+  <data name="BackButton_Label" xml:space="preserve"><value>Voltar</value></data>
+  <data name="Header_Forward.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Avançar</value></data>
+  <data name="Header_Forward.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Avançar</value></data>
+  <data name="Transport_Shuffle.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Ordem aleatória</value></data>
+  <data name="Transport_Shuffle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Ordem aleatória</value></data>
+  <data name="Transport_Previous.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Anterior</value></data>
+  <data name="Transport_Previous.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Anterior</value></data>
+  <data name="Transport_Next.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Próxima</value></data>
+  <data name="Transport_Next.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Próxima</value></data>
+  <data name="Transport_Repeat.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Repetir</value></data>
+  <data name="Transport_Repeat.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Repetir</value></data>
+  <data name="Transport_Play" xml:space="preserve"><value>Tocar</value></data>
+  <data name="Transport_Pause" xml:space="preserve"><value>Pausar</value></data>
+  <data name="PlaybackBar_Progress.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Posição da faixa</value></data>
+  <data name="Volume_Slider.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Volume</value></data>
+  <data name="Volume_Mute" xml:space="preserve"><value>Silenciar</value></data>
+  <data name="Volume_Unmute" xml:space="preserve"><value>Ativar som</value></data>
+  <data name="Common_Close" xml:space="preserve"><value>Fechar</value></data>
+  <data name="ArtistCard_Label.Text" xml:space="preserve"><value>Artista</value></data>
+  <data name="SettingsCard_DevBadge.Text" xml:space="preserve"><value>EM DESENVOLVIMENTO</value></data>
+  <data name="SettingsIntegrations_LastFm_ApiKey.Header" xml:space="preserve"><value>Chave da API</value></data>
+  <data name="SettingsIntegrations_LastFm_ApiKey.PlaceholderText" xml:space="preserve"><value>Cole sua chave de API do Last.fm</value></data>
+  <data name="SettingsIntegrations_LastFm_ApiSecret.Header" xml:space="preserve"><value>Segredo da API</value></data>
+  <data name="SettingsIntegrations_LastFm_ApiSecret.PlaceholderText" xml:space="preserve"><value>Cole o segredo compartilhado do Last.fm</value></data>
+  <data name="SettingsIntegrations_LastFm_ApiHint.Text" xml:space="preserve"><value>Crie credenciais gratuitas em last.fm/api/account/create</value></data>
+  <data name="LoginStatus_StartFailed" xml:space="preserve"><value>Não foi possível iniciar o login. Verifique sua conexão e gere um novo código.</value></data>
+  <data name="LoginStatus_Retrying" xml:space="preserve"><value>Conexão perdida. Ainda aguardando o login…</value></data>
+  <data name="LoginStatus_Failed" xml:space="preserve"><value>O login falhou: {0}</value></data>
 </root>

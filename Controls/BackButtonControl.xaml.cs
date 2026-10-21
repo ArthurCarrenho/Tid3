@@ -37,6 +37,9 @@ namespace TidalUi3.Controls
         public BackButtonControl()
         {
             this.InitializeComponent();
+            var back = Helpers.Loc.Get("BackButton_Label");
+            LabelText.Text = back;
+            Helpers.Loc.Label(InnerButton, back);
         }
 
         private void InnerButton_Click(object sender, RoutedEventArgs e)

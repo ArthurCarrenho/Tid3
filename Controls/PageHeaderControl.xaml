@@ -37,6 +37,7 @@
                 Width="32"
                 Height="32"
                 Padding="0"
+                x:Uid="Header_Back"
                 ToolTipService.ToolTip="Back"
                 IsEnabled="{x:Bind CanGoBack, Mode=OneWay}"
             >
@@ -49,6 +50,7 @@
                 Width="32"
                 Height="32"
                 Padding="0"
+                x:Uid="Header_Forward"
                 ToolTipService.ToolTip="Forward"
                 IsEnabled="{x:Bind CanGoForward, Mode=OneWay}"
             >

@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Windows TFM: LyricsService and TidalApiClient use a few WinRT APIs. -->
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>TidalUi3.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <!--
+    The app is a packaged WinUI executable and can't be referenced from here, so the classes
+    under test, which don't touch the UI, are compiled in from source.
+  -->
+  <ItemGroup>
+    <Compile Include="..\..\Models\Track.cs" Link="App\Track.cs" />
+    <Compile Include="..\..\Models\QueueSection.cs" Link="App\QueueSection.cs" />
+    <Compile Include="..\..\Helpers\BulkObservableCollection.cs" Link="App\BulkObservableCollection.cs" />
+    <Compile Include="..\..\Helpers\QueueRows.cs" Link="App\QueueRows.cs" />
+    <Compile Include="..\..\Helpers\LoadingTrackListPlayer.cs" Link="App\LoadingTrackListPlayer.cs" />
+    <Compile Include="..\..\Services\QueueService.cs" Link="App\QueueService.cs" />
+    <Compile Include="..\..\Services\LyricsService.cs" Link="App\LyricsService.cs" />
+    <Compile Include="..\..\Services\TidalApiClient.cs" Link="App\TidalApiClient.cs" />
+    <Compile Include="..\..\Services\TidalApiModels.cs" Link="App\TidalApiModels.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+</Project>

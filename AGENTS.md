@@ -117,8 +117,9 @@ another architecture (default `x64`).
 .\build.ps1 dev          # build Debug, register AppX layout, launch  (fast inner loop)
 .\build.ps1 build        # build only
 .\build.ps1 run          # launch the already-registered package
+.\build.ps1 install      # Release copied to %LOCALAPPDATA%\Programs\Tid3 and registered from there
 .\build.ps1 msix         # publish Release -> signed .msix in packages/
-.\build.ps1 unregister   # remove the registered package
+.\build.ps1 unregister   # remove the registered package (and its app data)
 .\build.ps1 clean        # delete bin/, obj/, packages/
 ```
 
@@ -333,10 +334,18 @@ DASH manifests (XML) are handled separately from JSON manifests for Hi-Res conte
 
 ## Testing
 
-No automated test projects currently exist. Testing is done manually through:
-1. Debug builds with verbose logging
-2. JSON dump files for API response inspection
-3. Exception logs for error analysis
+`tests/TidalUi3.Tests` (xUnit) covers the logic that doesn't need the UI: the queue
+(`QueueService`), the queue panel's row diff (`QueueRows`), playing lists that load page by
+page (`LoadingTrackListPlayer`) and LRC parsing. The app is a packaged WinUI executable and
+can't be referenced, so the test project compiles those source files in directly; add a file
+there when a new class is worth testing. The app project excludes `tests\**` from its items.
+
+```powershell
+dotnet test tests/TidalUi3.Tests
+```
+
+The release workflow runs them before packaging. Everything that touches WinUI or the media
+pipeline is still tested by hand: Debug builds log to `Logs/` (see Error Handling).
 
 ---
 

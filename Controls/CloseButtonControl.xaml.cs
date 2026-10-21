@@ -20,14 +20,14 @@ namespace TidalUi3.Controls
         private static void OnToolTipTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             if (d is CloseButtonControl control && e.NewValue is string tooltip)
-            {
-                ToolTipService.SetToolTip(control.InnerButton, tooltip);
-            }
+                Helpers.Loc.Label(control.InnerButton, tooltip);
         }
 
         public CloseButtonControl()
         {
             this.InitializeComponent();
+            // Until a page sets a more specific one through x:Uid ("Close queue").
+            Helpers.Loc.Label(InnerButton, Helpers.Loc.Get("Common_Close"));
         }
 
         private void OnButtonClick(object sender, RoutedEventArgs e)

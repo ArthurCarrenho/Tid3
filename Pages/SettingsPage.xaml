@@ -255,17 +255,20 @@
                     <!-- API credentials -->
                     <TextBox
                         x:Name="LastFmApiKeyBox"
+                        x:Uid="SettingsIntegrations_LastFm_ApiKey"
                         Header="API Key"
                         PlaceholderText="Paste your Last.fm API key"
                         LostFocus="LastFmApiKeyBox_LostFocus"
                     />
                     <PasswordBox
                         x:Name="LastFmApiSecretBox"
+                        x:Uid="SettingsIntegrations_LastFm_ApiSecret"
                         Header="API Secret"
                         PlaceholderText="Paste your Last.fm shared secret"
                         LostFocus="LastFmApiSecretBox_LostFocus"
                     />
                     <TextBlock
+                        x:Uid="SettingsIntegrations_LastFm_ApiHint"
                         Text="Get free API credentials at last.fm/api/account/create"
                         Style="{StaticResource CaptionTextBlockStyle}"
                         Foreground="{ThemeResource TextFillColorTertiaryBrush}"
