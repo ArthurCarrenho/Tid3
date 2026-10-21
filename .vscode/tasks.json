@@ -1,0 +1,103 @@
+{
+  // Todas as tasks delegam para build.ps1 na raiz do repo, entao o comportamento
+  // e identico rodando pelo VS Code ou direto no terminal.
+  "version": "2.0.0",
+  "inputs": [
+    {
+      "id": "platform",
+      "type": "pickString",
+      "description": "Plataforma alvo",
+      "options": ["x64", "x86", "arm64"],
+      "default": "x64"
+    }
+  ],
+  "tasks": [
+    {
+      "label": "build",
+      "detail": "dotnet build Debug x64 (sem registrar)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy", "Bypass",
+        "-File", "${workspaceFolder}/build.ps1",
+        "build"
+      ],
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": "$msCompile",
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true }
+    },
+    {
+      "label": "dev",
+      "detail": "Build + registra o layout AppX + inicia o app (loop rapido)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy", "Bypass",
+        "-File", "${workspaceFolder}/build.ps1",
+        "dev"
+      ],
+      "problemMatcher": "$msCompile",
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true }
+    },
+    {
+      "label": "dev (escolher plataforma)",
+      "detail": "Igual a 'dev', perguntando x64/x86/arm64",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy", "Bypass",
+        "-File", "${workspaceFolder}/build.ps1",
+        "dev",
+        "-Platform", "${input:platform}"
+      ],
+      "problemMatcher": "$msCompile",
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true }
+    },
+    {
+      "label": "msix",
+      "detail": "Publish Release + gera .msix assinado em packages/",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy", "Bypass",
+        "-File", "${workspaceFolder}/build.ps1",
+        "msix",
+        "-Platform", "${input:platform}"
+      ],
+      "problemMatcher": "$msCompile",
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true }
+    },
+    {
+      "label": "clean",
+      "detail": "Remove bin/, obj/ e packages/",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy", "Bypass",
+        "-File", "${workspaceFolder}/build.ps1",
+        "clean"
+      ],
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true }
+    },
+    {
+      "label": "unregister",
+      "detail": "Remove o pacote Tid3 registrado neste usuario",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy", "Bypass",
+        "-File", "${workspaceFolder}/build.ps1",
+        "unregister"
+      ],
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true }
+    }
+  ]
+}

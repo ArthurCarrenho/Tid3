@@ -1,13 +1,19 @@
 # Build output
 bin/
 obj/
+packages/
 
 # IDE
 .vs/
-.vscode/
 .zed/
 *.user
 *.suo
+
+# VS Code: versiona apenas a config compartilhada de build/debug
+.vscode/*
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
 
 # Windows artifacts
 nul
@@ -33,3 +39,6 @@ docs/examples/go-client/config.json
 # Secrets (never commit)
 .env
 .env.*
+
+# Certificado self-signed de desenvolvimento (gerado por build.ps1)
+build/*.pfx

@@ -1,0 +1,28 @@
+{
+  // O Tid3 depende de identidade de pacote (ApplicationData.Current, Package.Current,
+  // StartupTask), entao NAO da para debugar iniciando o .exe direto -- ele precisa ser
+  // ativado pelo shell como pacote registrado. Fluxo:
+  //
+  //   1. Rode a task "dev" (Terminal > Run Task, ou Ctrl+Shift+B para "build")
+  //      -> compila, registra o layout AppX e abre o app com identidade de pacote.
+  //   2. Rode "Anexar ao Tid3" aqui no F5 -> breakpoints em C# passam a funcionar.
+  //
+  // Limitacao real: o codigo de inicializacao (App.OnLaunched, ctor de MainWindow) ja
+  // rodou quando o debugger anexa. Para debugar startup, insira temporariamente um
+  // System.Diagnostics.Debugger.Launch() no inicio de App.OnLaunched.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Anexar ao Tid3",
+      "type": "coreclr",
+      "request": "attach",
+      "processName": "TidalUi3.exe"
+    },
+    {
+      "name": "Anexar (escolher processo)",
+      "type": "coreclr",
+      "request": "attach",
+      "processId": "${command:pickProcess}"
+    }
+  ]
+}

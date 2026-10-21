@@ -119,17 +119,61 @@ Add-AppxPackage -Path .\Tid3_x64.msix
 
 ### Build from source
 
+Visual Studio is **not** required. The entire WinUI 3 toolchain is restored from NuGet —
+`Microsoft.WindowsAppSDK` provides the XAML compiler and the MSIX build targets, and
+`Microsoft.Windows.SDK.BuildTools` provides `makeappx`, `makepri` and `signtool`. The only
+prerequisite is the .NET SDK.
+
 **Prerequisites**
 - Windows 10 version 2004 (build 19041) or later
-- [Visual Studio 2022](https://visualstudio.microsoft.com/) with the **Windows App SDK** workload
-- [.NET 8.0 SDK](https://dotnet.microsoft.com/download)
+- [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) (x64) — pinned by `global.json`
+- **Developer Mode** enabled (Settings → System → For developers) — required to register
+  the app locally without signing
 
 ```bash
 git clone https://github.com/ArthurCarrenho/tid3.git
 cd tid3
 ```
 
-Open `TidalUi3.sln` in Visual Studio 2022, set the target platform to **x64**, and press **F5**.
+**Fast inner loop** — build, register and launch:
+
+```powershell
+.\build.ps1 dev
+```
+
+This compiles Debug/x64, registers the loose `AppX` layout with `Add-AppxPackage -Register`,
+and starts the app. No MSIX packing and no signing involved, so it is quick to repeat. It is
+the same mechanism Visual Studio's F5 uses under the hood.
+
+**All tasks**
+
+| Command | What it does |
+|---------|--------------|
+| `.\build.ps1 dev` | Build Debug, register the AppX layout, launch |
+| `.\build.ps1 build` | Build only |
+| `.\build.ps1 run` | Launch the already-registered package |
+| `.\build.ps1 msix` | Publish Release and produce a signed `.msix` in `packages/` |
+| `.\build.ps1 unregister` | Remove the registered package |
+| `.\build.ps1 clean` | Delete `bin/`, `obj/`, `packages/` |
+
+Add `-Platform x86` or `-Platform arm64` to target another architecture (default is `x64`).
+
+`.\build.ps1 msix` generates a self-signed development certificate at `build/Tid3_Dev.pfx`
+on first run. To sign with a real certificate instead, set `TID3_CERT_PFX` and
+`TID3_CERT_PASSWORD`.
+
+**Editor**
+
+The repo ships VS Code tasks and attach configurations in `.vscode/`. Because the app
+requires package identity, debugging works by running the `dev` task and then attaching
+with the **Anexar ao Tid3** launch configuration — C# breakpoints work normally from there.
+XAML Hot Reload and the visual XAML designer remain Visual Studio-only features.
+
+**Releases**
+
+Releases are produced entirely by CI ([`.github/workflows/release.yml`](.github/workflows/release.yml)),
+which only runs `dotnet publish`. Pushing a `v*.*.*` tag builds the x64, x86 and arm64
+packages and creates a draft GitHub Release.
 
 ---
 
